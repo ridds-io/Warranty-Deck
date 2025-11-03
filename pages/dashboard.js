@@ -72,7 +72,6 @@ export default function Dashboard() {
       })
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      alert('Failed to load dashboard data. Please try again.')
     } finally {
       setLoading(false)
     }
