@@ -164,19 +164,44 @@ export default function UploadPage() {
       // Insert receipt into database
       const { data: receiptData, error: receiptError } = await supabase
         .from('receipts')
-        .insert({
-          user_id: userId,
-          receipt_number: formData.receipt_number,
-          file_url: fileUrl,
-          store_name: formData.store_name,
-          purchase_date: formData.purchase_date,
-          total_amount: parseFloat(formData.total_amount) || 0,
-          upload_date: new Date().toISOString(),
-          status: 'active'
-        })
+        .insert([
+          {
+            user_id: userId, // UUID from Supabase Auth
+            receipt_number: formData.receipt_number,
+            file_url: fileUrl,
+            store_name: formData.store_name,
+            purchase_date: formData.purchase_date,
+            total_amount: parseFloat(formData.total_amount) || 0,
+            upload_date: new Date().toISOString(),
+            status: 'active'
+          }
+        ])
         .select()
+        .single();
 
-      if (receiptError) throw receiptError
+      if (receiptError) throw receiptError;
+
+      // ✅ Automatically create warranty for that receipt
+      const start = new Date(formData.purchase_date);
+      const end = new Date(start);
+      end.setFullYear(end.getFullYear() + 1); // default 1-year warranty
+
+      const { error: warrantyError } = await supabase
+        .from('warranties')
+        .insert([
+          {
+            user_id: userId,
+            receipt_id: receiptData.receipt_id, // FK to receipts
+            product_name: formData.store_name || 'Unnamed Product',
+            brand: 'Unknown',
+            warranty_start_date: start.toISOString().split('T')[0],
+            warranty_end_date: end.toISOString().split('T')[0],
+            warranty_type: 'Standard',
+            warranty_number: formData.receipt_number || null
+          }
+        ]);
+
+      if (warrantyError) throw warrantyError;
 
       // Redirect to dashboard
       router.push('/dashboard')
@@ -312,7 +337,7 @@ export default function UploadPage() {
                   name="store_name"
                   value={formData.store_name}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                   required
                 />
               </div>
@@ -324,7 +349,7 @@ export default function UploadPage() {
                   name="purchase_date"
                   value={formData.purchase_date}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                   required
                 />
               </div>
@@ -337,7 +362,7 @@ export default function UploadPage() {
                   step="0.01"
                   value={formData.total_amount}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                   required
                 />
               </div>
@@ -349,7 +374,7 @@ export default function UploadPage() {
                   name="receipt_number"
                   value={formData.receipt_number}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                 />
               </div>
             </div>
