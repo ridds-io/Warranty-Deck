@@ -1,0 +1,200 @@
+/* ==========================================================================
+   WARRANTYDECK — THEMES
+   themes.css
+
+   How theming works in WarrantyDeck:
+   ─────────────────────────────────
+   tokens.css defines ALL variables under :root (the light theme default).
+   This file OVERRIDES those same variable names for the dark theme.
+
+   When the user switches theme, we do ONE thing in JavaScript:
+     document.documentElement.setAttribute('data-theme', 'dark')
+
+   The browser then uses [data-theme="dark"] values everywhere automatically.
+   No component ever needs to check "what theme is active?" — CSS handles it.
+
+   Theme names:
+   - Light → "Paper"       (warm white, grey ink — like a fresh receipt)
+   - Dark  → "Carbon Copy" (deep charcoal, warm off-white — like carbon paper)
+   ========================================================================== */
+
+
+/* ==========================================================================
+   LIGHT THEME — "Paper"
+   
+   Explicitly defined here even though :root already sets these in tokens.css.
+   This makes it easy to compare light vs dark side by side in this one file,
+   and lets us toggle back to light by setting data-theme="light".
+   ========================================================================== */
+
+[data-theme="light"] {
+
+  /* Backgrounds */
+  --color-bg-base:       #FAF9F6;
+  --color-bg-surface:    #F5F3EE;
+  --color-bg-elevated:   #EEEAE2;
+  --color-bg-inset:      #E8E4DB;
+  --color-bg-overlay:    rgba(28, 26, 23, 0.5);
+
+  /* Text */
+  --color-text-primary:   #1C1A17;
+  --color-text-secondary: #5C5750;
+  --color-text-tertiary:  #9C9589;
+  --color-text-disabled:  #C8C3B8;
+  --color-text-inverse:   #FAF9F6;
+
+  /* Borders */
+  --color-border-strong:  #C8C3B8;
+  --color-border-soft:    #E0DDD6;
+  --color-border-dashed:  #C8C3B8;
+  --color-border-focus:   #1C1A17;
+
+  /* Accent */
+  --color-accent:         #1C1A17;
+  --color-accent-hover:   #000000;
+  --color-accent-subtle:  #EEEAE2;
+
+  /* Status */
+  --color-success:        #4A7C59;
+  --color-success-bg:     #EFF5F1;
+  --color-warning:        #B5892A;
+  --color-warning-bg:     #FBF5E6;
+  --color-danger:         #8B3A3A;
+  --color-danger-bg:      #F9EDED;
+  --color-info:           #3A5F8B;
+  --color-info-bg:        #EDF2F8;
+
+  /* Receipt special */
+  --color-stamp:          #8B3A3A;
+  --color-highlight:      #F0EAD0;
+  --color-receipt-bg:     #FDFCF8;
+  --color-perforations:   #C8C3B8;
+
+  /* Shadows — warm tinted */
+  --shadow-xs:      0 1px 2px rgba(28, 26, 23, 0.06);
+  --shadow-sm:      0 1px 4px rgba(28, 26, 23, 0.08);
+  --shadow-md:      0 4px 12px rgba(28, 26, 23, 0.10);
+  --shadow-lg:      0 8px 24px rgba(28, 26, 23, 0.12);
+  --shadow-xl:      0 16px 40px rgba(28, 26, 23, 0.14);
+  --shadow-receipt: 2px 3px 0px rgba(28, 26, 23, 0.10),
+                    4px 6px 0px rgba(28, 26, 23, 0.05);
+  --shadow-receipt-hover: 3px 5px 0px rgba(28, 26, 23, 0.14),
+                          6px 10px 0px rgba(28, 26, 23, 0.07);
+  --shadow-focus:   0 0 0 3px rgba(28, 26, 23, 0.2);
+}
+
+
+/* ==========================================================================
+   DARK THEME — "Carbon Copy"
+   
+   Named after carbon copy paper — the dark duplicate sheet underneath
+   the original receipt. Deep warm charcoal backgrounds, off-white text.
+   
+   Key principle: we NEVER go pure black (#000) or pure white (#FFF).
+   Pure black feels like a void. Pure white on dark feels harsh.
+   Everything stays in the warm brown-charcoal family.
+   ========================================================================== */
+
+[data-theme="dark"] {
+
+  /* Backgrounds — deep warm charcoals, not cold greys */
+  --color-bg-base:       #1C1A17;  /* darkest — main page bg, like carbon paper */
+  --color-bg-surface:    #252320;  /* card backgrounds — slightly lighter */
+  --color-bg-elevated:   #2E2B27;  /* hover states, active sidebar */
+  --color-bg-inset:      #363229;  /* input fields — slightly warmer */
+  --color-bg-overlay:    rgba(10, 9, 8, 0.7); /* modal backdrop — deeper */
+
+  /* Text — warm whites and off-whites, never pure #FFFFFF */
+  --color-text-primary:   #F5F3EE;  /* main text — warm off-white */
+  --color-text-secondary: #B8B2A8;  /* secondary — muted warm grey */
+  --color-text-tertiary:  #7A756C;  /* placeholders, labels */
+  --color-text-disabled:  #4A4640;  /* disabled — barely visible */
+  --color-text-inverse:   #1C1A17;  /* text on light elements */
+
+  /* Borders — subtle, just enough to define edges */
+  --color-border-strong:  #3D3A34;  /* card edges */
+  --color-border-soft:    #2A2822;  /* row separators */
+  --color-border-dashed:  #4A4640;  /* perforations — slightly brighter so visible */
+  --color-border-focus:   #F5F3EE;  /* focus ring flips to light in dark mode */
+
+  /* Accent — flips to warm white in dark mode */
+  --color-accent:         #F5F3EE;  /* primary buttons, links */
+  --color-accent-hover:   #FFFFFF;
+  --color-accent-subtle:  #2E2B27;  /* subtle accent backgrounds */
+
+  /* Status — slightly brighter than light mode so they read on dark bg */
+  --color-success:        #5A9C6E;
+  --color-success-bg:     #1A2B1F;
+  --color-warning:        #C9A040;
+  --color-warning-bg:     #2B2210;
+  --color-danger:         #A85252;
+  --color-danger-bg:      #2B1515;
+  --color-info:           #5080AA;
+  --color-info-bg:        #121C28;
+
+  /* Receipt special — adjusted for dark bg */
+  --color-stamp:          #A85252;  /* stamp slightly brighter to show on dark */
+  --color-highlight:      #2A2510;  /* selected receipt — very subtle warm glow */
+  --color-receipt-bg:     #222019;  /* individual receipt bg — warmest dark */
+  --color-perforations:   #3D3A34;  /* dashed lines — visible but subtle */
+
+  /* Shadows — deeper and warmer in dark mode */
+  --shadow-xs:      0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm:      0 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md:      0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-lg:      0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-xl:      0 16px 40px rgba(0, 0, 0, 0.40);
+  --shadow-receipt: 2px 3px 0px rgba(0, 0, 0, 0.25),
+                    4px 6px 0px rgba(0, 0, 0, 0.15);
+  --shadow-receipt-hover: 3px 5px 0px rgba(0, 0, 0, 0.35),
+                          6px 10px 0px rgba(0, 0, 0, 0.20);
+  --shadow-focus:   0 0 0 3px rgba(245, 243, 238, 0.25);
+}
+
+
+/* ==========================================================================
+   THEME TRANSITION
+   
+   When the user clicks the theme toggle, instead of an instant jarring flash,
+   all colour changes animate smoothly over 300ms.
+   
+   We use a separate class (.theme-transitioning) that gets added before the
+   theme switch and removed after — this way the transition only fires during
+   intentional theme changes, not on every page load.
+   ========================================================================== */
+
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition:
+    background-color var(--duration-normal) var(--ease-inout),
+    color            var(--duration-normal) var(--ease-inout),
+    border-color     var(--duration-normal) var(--ease-inout),
+    box-shadow       var(--duration-normal) var(--ease-inout) !important;
+    /* !important overrides any component-level transitions during the switch */
+}
+
+
+/* ==========================================================================
+   THEME TOGGLE INDICATOR
+   
+   These utility classes let any element visually respond to the active theme.
+   Use sparingly — most theming should happen automatically via CSS variables.
+   ========================================================================== */
+
+/* Only visible in light mode */
+.light-only {
+  display: block;
+}
+[data-theme="dark"] .light-only {
+  display: none;
+}
+
+/* Only visible in dark mode */
+.dark-only {
+  display: none;
+}
+[data-theme="dark"] .dark-only {
+  display: block;
+}

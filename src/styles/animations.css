@@ -1,0 +1,539 @@
+/* ==========================================================================
+   WARRANTYDECK — ANIMATIONS
+   animations.css
+
+   All keyframe definitions and animation utility classes live here.
+   
+   Structure:
+   1.  Typewriter effect         — "Hi Sarah▌" greeting on dashboard
+   2.  Cursor blink              — blinking block cursor after typewriter
+   3.  Fade in                   — general purpose opacity entrance
+   4.  Fade in up                — content rising as it appears (most used)
+   5.  Fade in down              — dropdowns, tooltips appearing
+   6.  Slide in right            — sidebar, drawer panels
+   7.  Slide in left             — back navigation
+   8.  Receipt unfold            — receipt detail page entrance
+   9.  Stamp slap                — PAID / EXPIRED / VOID stamp animation
+   10. Stat count up             — landing page numbers counting up
+   11. Perforation draw          — dashed line drawing itself
+   12. Shimmer                   — skeleton loading state
+   13. Toast slide in            — notification toasts
+   14. Modal entrance            — modal appearing
+   15. Utility animation classes — apply animations without custom CSS
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   1. TYPEWRITER
+   
+   Used for the "Hi Sarah" greeting on the dashboard.
+   
+   How it works: the text container has a fixed width of 0 and overflow hidden.
+   The animation expands the width character by character using steps().
+   steps(N) means "jump in N discrete steps" — no smooth interpolation.
+   This creates the mechanical typewriter feel.
+   
+   In React, we'll use a JavaScript approach (adding letters one by one to
+   state) for more control over the character count. This CSS version is
+   here as a fallback and for simple use cases.
+   -------------------------------------------------------------------------- */
+
+@keyframes typewriter {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* The element needs: white-space: nowrap, overflow: hidden */
+.animate-typewriter {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  animation: typewriter 1.2s steps(20, end) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   2. CURSOR BLINK
+   
+   The blinking block cursor ▌ that appears after the typewriter text.
+   Uses a pseudo-element so no extra HTML is needed — just add the class.
+   
+   steps(1) means instant on/off, not a smooth fade — real cursors don't fade.
+   -------------------------------------------------------------------------- */
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Add this to the element that should show a cursor after its text */
+.animate-cursor::after {
+  content: '▌';
+  display: inline-block;
+  color: var(--color-text-primary);
+  margin-left: 2px;
+  animation: cursorBlink var(--typewriter-cursor-blink, 530ms) steps(1) infinite;
+}
+
+/* Cursor stops blinking once typing is "done" */
+.animate-cursor.typing-done::after {
+  animation-iteration-count: 3; /* blinks 3 more times then stops */
+}
+
+
+/* --------------------------------------------------------------------------
+   3. FADE IN
+   
+   The simplest entrance — pure opacity, no movement.
+   Use for: overlays, modals backdrops, tooltips.
+   -------------------------------------------------------------------------- */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal, 250ms) var(--ease-out) forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut var(--duration-normal, 250ms) var(--ease-in) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   4. FADE IN UP
+   
+   The most-used entrance animation. Elements rise slightly as they appear.
+   Distance is intentionally small (12px) — just enough to feel like
+   the content is settling into place, not flying in dramatically.
+   
+   Use for: cards, content sections, dashboard items, any page content.
+   -------------------------------------------------------------------------- */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--duration-normal, 250ms) var(--ease-out) forwards;
+}
+
+/* Staggered children — each child animates slightly after the previous */
+/* Usage: add .stagger-children to parent, children get auto-delayed */
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+/* Beyond 8 items, no additional delay — avoids very long wait times */
+.stagger-children > *:nth-child(n+9){ animation-delay: 420ms; }
+
+
+/* --------------------------------------------------------------------------
+   5. FADE IN DOWN
+   
+   Elements drop slightly as they appear. 
+   Use for: dropdowns, select menus, tooltips appearing below a trigger.
+   -------------------------------------------------------------------------- */
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown var(--duration-fast, 150ms) var(--ease-out) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   6. SLIDE IN RIGHT
+   
+   Panel slides in from the right edge.
+   Use for: detail panels, chat window, drawers.
+   -------------------------------------------------------------------------- */
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight var(--duration-normal, 250ms) var(--ease-out) forwards;
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight var(--duration-fast, 150ms) var(--ease-in) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   7. SLIDE IN LEFT
+   
+   Panel slides in from the left edge.
+   Use for: sidebar on mobile, back navigation.
+   -------------------------------------------------------------------------- */
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft var(--duration-normal, 250ms) var(--ease-out) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   8. RECEIPT UNFOLD
+   
+   The signature animation for WarrantyDeck. When you open a receipt detail,
+   it unfolds from the top like unfolding a real paper receipt.
+   
+   Uses scaleY — the receipt "unrolls" vertically from the header down.
+   transform-origin: top — the fold point is the top edge.
+   -------------------------------------------------------------------------- */
+
+@keyframes receiptUnfold {
+  from {
+    opacity: 0;
+    transform: scaleY(0.6) translateY(-16px);
+    transform-origin: top center;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+    transform-origin: top center;
+  }
+}
+
+.animate-receipt-unfold {
+  animation: receiptUnfold var(--duration-slow, 400ms) var(--ease-spring) forwards;
+  transform-origin: top center;
+}
+
+
+/* --------------------------------------------------------------------------
+   9. STAMP SLAP
+   
+   The PAID / EXPIRED / VOID stamp animation.
+   Simulates a rubber stamp being pressed down:
+   - Starts large and slightly rotated (stamp coming from above)
+   - Hits with a slight scale overshoot (impact)
+   - Settles to final position
+   
+   The opacity goes from 0 → 1 quickly to simulate ink transfer.
+   -------------------------------------------------------------------------- */
+
+@keyframes stampSlap {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(2.5);
+  }
+  60% {
+    opacity: 0.9;
+    transform: rotate(-12deg) scale(0.92); /* slight compression on impact */
+  }
+  80% {
+    transform: rotate(-12deg) scale(1.04); /* tiny bounce back */
+  }
+  100% {
+    opacity: 0.75;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+
+.animate-stamp {
+  animation: stampSlap var(--duration-slow, 400ms) var(--ease-out) forwards;
+  /* Start hidden — animation will reveal it */
+  opacity: 0;
+}
+
+/* Delay stamp so the receipt content loads first */
+.animate-stamp-delayed {
+  animation: stampSlap var(--duration-slow, 400ms) var(--ease-out) 600ms forwards;
+  opacity: 0;
+}
+
+
+/* --------------------------------------------------------------------------
+   10. STAT COUNT UP
+    
+    Landing page stat numbers (75%, 22.1%, 47%) animate in with a slight
+    scale punch to draw the eye. The actual number counting is done in
+    JavaScript — this CSS handles the entrance of the stat block.
+    -------------------------------------------------------------------------- */
+
+@keyframes statPunch {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-stat-punch {
+  animation: statPunch var(--duration-slow, 400ms) var(--ease-spring) forwards;
+  opacity: 0;
+}
+
+/* Stagger the three stat cards */
+.animate-stat-punch:nth-child(1) { animation-delay: 200ms; }
+.animate-stat-punch:nth-child(2) { animation-delay: 400ms; }
+.animate-stat-punch:nth-child(3) { animation-delay: 600ms; }
+
+
+/* --------------------------------------------------------------------------
+   11. PERFORATION DRAW
+    
+    The dashed divider line between receipt sections draws itself left to right.
+    Uses a CSS clip-path or pseudo-element width trick.
+    
+    This is subtle — most users won't consciously notice it, but it makes
+    the receipt feel like it's being printed in real time.
+    -------------------------------------------------------------------------- */
+
+@keyframes perforationDraw {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+.animate-perforation {
+  animation: perforationDraw var(--duration-slow, 400ms) var(--ease-out) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   12. SHIMMER (skeleton loading)
+    
+    Used while data is loading from Supabase. A gradient sweeps across
+    placeholder blocks to show "something is coming."
+    
+    The gradient moves left to right via background-position.
+    background-size: 200% means the gradient is twice as wide as the element,
+    so we can slide it fully across.
+    -------------------------------------------------------------------------- */
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-inset)    25%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-inset)    75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s var(--ease-inout) infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important; /* hide any text inside skeleton */
+  user-select: none;
+}
+
+/* Skeleton variants */
+.skeleton-text {
+  height: 0.85em;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-text.w-full  { width: 100%; }
+.skeleton-text.w-3-4   { width: 75%; }
+.skeleton-text.w-1-2   { width: 50%; }
+.skeleton-text.w-1-3   { width: 33%; }
+
+.skeleton-card {
+  width: var(--receipt-card-width, 280px);
+  min-height: var(--receipt-card-min-h, 320px);
+  border-radius: var(--radius-md);
+}
+
+
+/* --------------------------------------------------------------------------
+   13. TOAST SLIDE IN
+    
+    Notification toasts slide in from the bottom-right.
+    -------------------------------------------------------------------------- */
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn var(--duration-normal, 250ms) var(--ease-spring) forwards;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut var(--duration-fast, 150ms) var(--ease-in) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   14. MODAL ENTRANCE
+    
+    Modal scales up from 95% while fading in — subtle depth effect.
+    The backdrop fades in separately (use .animate-fade-in on the backdrop).
+    -------------------------------------------------------------------------- */
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalExit {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+}
+
+.animate-modal-enter {
+  animation: modalEnter var(--duration-normal, 250ms) var(--ease-spring) forwards;
+}
+
+.animate-modal-exit {
+  animation: modalExit var(--duration-fast, 150ms) var(--ease-in) forwards;
+}
+
+
+/* --------------------------------------------------------------------------
+   15. UTILITY ANIMATION CLASSES
+    
+    Reusable helpers — apply directly in JSX without writing new CSS.
+    
+    Duration modifiers:
+      .anim-fast    → 150ms
+      .anim-normal  → 250ms  (default)
+      .anim-slow    → 400ms
+      .anim-slower  → 600ms
+    
+    Delay modifiers:
+      .delay-100 through .delay-600
+    
+    Fill mode:
+      .anim-forwards  → stays at end state (almost always what you want)
+    -------------------------------------------------------------------------- */
+
+/* Duration */
+.anim-fast    { animation-duration: var(--duration-fast,   150ms) !important; }
+.anim-normal  { animation-duration: var(--duration-normal, 250ms) !important; }
+.anim-slow    { animation-duration: var(--duration-slow,   400ms) !important; }
+.anim-slower  { animation-duration: var(--duration-slower, 600ms) !important; }
+
+/* Delay */
+.delay-50  { animation-delay:  50ms !important; }
+.delay-100 { animation-delay: 100ms !important; }
+.delay-200 { animation-delay: 200ms !important; }
+.delay-300 { animation-delay: 300ms !important; }
+.delay-400 { animation-delay: 400ms !important; }
+.delay-500 { animation-delay: 500ms !important; }
+.delay-600 { animation-delay: 600ms !important; }
+
+/* Fill mode — "stay at final frame after animation ends" */
+.anim-forwards { animation-fill-mode: forwards !important; }
+
+/* Pause all animations (accessibility — reduced motion) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:   0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration:  0.01ms !important;
+  }
+}

@@ -1,0 +1,58 @@
+// =============================================================================
+// WARRANTYDECK — REIMBURSEMENT
+// src/pages/Reimbursement.jsx
+// =============================================================================
+
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import PageWrapper from '../components/layout/PageWrapper'
+import ReceiptCard from '../components/receipt/ReceiptCard'
+import Input from '../components/ui/Input'
+import EmptyState from '../components/ui/EmptyState'
+import { useReceipts } from '../hooks/useReceipts'
+
+export default function Reimbursement() {
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const { receipts, loading } = useReceipts()
+
+  const filtered = receipts.filter(receipt => {
+    if (receipt.folderType !== 'reimbursement') return false
+    if (!query) return true
+    return receipt.storeName.toLowerCase().includes(query.toLowerCase())
+  })
+
+  return (
+    <PageWrapper title="Reimbursement">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        <Input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search reimbursements"
+        />
+
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 'var(--space-4)',
+          }}
+        >
+          {loading ? (
+            <EmptyState message="Loading receipts..." />
+          ) : filtered.length === 0 ? (
+            <EmptyState message="No reimbursement receipts yet." />
+          ) : (
+            filtered.map(receipt => (
+              <ReceiptCard
+                key={receipt.id}
+                receipt={receipt}
+                onOpen={(id) => navigate(`/receipt/${id}`)}
+              />
+            ))
+          )}
+        </section>
+      </div>
+    </PageWrapper>
+  )
+}

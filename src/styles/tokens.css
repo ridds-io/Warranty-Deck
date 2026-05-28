@@ -1,0 +1,233 @@
+/* ==========================================================================
+   WARRANTYDECK — DESIGN TOKENS
+   tokens.css
+
+   This is the single source of truth for every visual value in the app.
+   Nothing in any component should ever use a hardcoded colour, font, or
+   spacing value. Always use var(--token-name) instead.
+
+   Structure:
+   1. Typography (fonts + scale)
+   2. Colours (light theme default — dark theme lives in themes.css)
+   3. Spacing
+   4. Border radius
+   5. Shadows
+   6. Transitions
+   7. Z-index layers
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Serif+Text:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+:root {
+
+  /* --------------------------------------------------------------------------
+     1. TYPOGRAPHY
+     
+     Three fonts, each with a specific job:
+     - Display (Playfair): headings, brand name, big statements
+     - Body (DM Serif Text): readable prose, descriptions, labels
+     - Mono (IBM Plex Mono): THE receipt font — all numbers, dates, IDs, amounts
+     
+     The mono font is what makes this feel like a real receipt.
+     -------------------------------------------------------------------------- */
+
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body:    'DM Serif Text', Georgia, serif;
+  --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Type scale — based on a 1rem = 16px root */
+  --text-xs:   0.6875rem;  /* 11px — receipt footnotes, fine print */
+  --text-sm:   0.8125rem;  /* 13px — labels, metadata, secondary info */
+  --text-base: 1rem;       /* 16px — body text */
+  --text-lg:   1.125rem;   /* 18px — card titles */
+  --text-xl:   1.375rem;   /* 22px — section headers */
+  --text-2xl:  1.75rem;    /* 28px — page titles */
+  --text-3xl:  2.25rem;    /* 36px — dashboard greeting */
+  --text-4xl:  3rem;       /* 48px — landing page subheadings */
+  --text-5xl:  4rem;       /* 64px — landing page stat numbers */
+  --text-6xl:  5.5rem;     /* 88px — hero numbers on wide screens */
+
+  /* Line heights */
+  --leading-tight:  1.2;   /* headings */
+  --leading-snug:   1.4;   /* subheadings */
+  --leading-normal: 1.6;   /* body text */
+  --leading-relaxed:1.8;   /* long-form reading */
+
+  /* Letter spacing */
+  --tracking-tight:  -0.02em;  /* large display type */
+  --tracking-normal:  0;
+  --tracking-wide:    0.05em;  /* labels, tags */
+  --tracking-wider:   0.1em;   /* receipt headers, store names */
+  --tracking-widest:  0.2em;   /* STAMP text — PAID, EXPIRED, VOID */
+
+  /* --------------------------------------------------------------------------
+     2. COLOURS — LIGHT THEME (default, "Paper")
+     
+     The concept: warm white + warm greys.
+     NOT cool white (#FFFFFF) — that feels like a screen.
+     We want #FAF9F6 — like slightly aged, premium paper.
+     
+     The ONLY accent is deep charcoal — the app is intentionally
+     near-monochromatic so receipt content is always the hero.
+     -------------------------------------------------------------------------- */
+
+  /* Backgrounds — from lightest to darkest */
+  --color-bg-base:       #FAF9F6;  /* main page background — warm paper white */
+  --color-bg-surface:    #F5F3EE;  /* card backgrounds — slightly warmer */
+  --color-bg-elevated:   #EEEAE2;  /* hover states, active sidebar items */
+  --color-bg-inset:      #E8E4DB;  /* input fields, code blocks */
+  --color-bg-overlay:    rgba(28, 26, 23, 0.5); /* modal backdrops */
+
+  /* Text — warm scale from near-black to muted */
+  --color-text-primary:   #1C1A17;  /* headings, body — warm near-black */
+  --color-text-secondary: #5C5750;  /* secondary info — warm medium grey */
+  --color-text-tertiary:  #9C9589;  /* placeholders, muted labels */
+  --color-text-disabled:  #C8C3B8;  /* disabled states */
+  --color-text-inverse:   #FAF9F6;  /* text on dark backgrounds */
+
+  /* Borders */
+  --color-border-strong:  #C8C3B8;  /* card edges, table lines */
+  --color-border-soft:    #E0DDD6;  /* subtle row separators */
+  --color-border-dashed:  #C8C3B8;  /* perforated receipt dividers */
+  --color-border-focus:   #1C1A17;  /* focus ring on inputs */
+
+  /* Accent — the only "colour" — deep charcoal stamp */
+  --color-accent:         #1C1A17;
+  --color-accent-hover:   #000000;
+  --color-accent-subtle:  #EEEAE2;  /* light accent bg for tags, badges */
+
+  /* Status — muted, not neon. Think ink, not LED. */
+  --color-success:        #4A7C59;  /* forest green — valid warranty */
+  --color-success-bg:     #EFF5F1;
+  --color-warning:        #B5892A;  /* warm amber — expiring soon */
+  --color-warning-bg:     #FBF5E6;
+  --color-danger:         #8B3A3A;  /* muted crimson — expired */
+  --color-danger-bg:      #F9EDED;
+  --color-info:           #3A5F8B;  /* slate blue — informational */
+  --color-info-bg:        #EDF2F8;
+
+  /* Special receipt colours */
+  --color-stamp:          #8B3A3A;  /* PAID / EXPIRED / VOID stamp colour */
+  --color-highlight:      #F0EAD0;  /* selected/focused receipt */
+  --color-receipt-bg:     #FDFCF8;  /* individual receipt paper colour */
+  --color-perforations:   #C8C3B8;  /* dashed divider lines */
+
+  /* --------------------------------------------------------------------------
+     3. SPACING
+     
+     Based on an 8px grid. Every margin, padding, and gap in the app
+     should use one of these values — never a random number like "14px".
+     
+     Why 8px? It divides evenly into most screen widths and creates
+     natural visual rhythm.
+     -------------------------------------------------------------------------- */
+
+  --space-0:  0;
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+  --space-32: 8rem;      /* 128px */
+
+  /* --------------------------------------------------------------------------
+     4. BORDER RADIUS
+     
+     Receipts are square. Almost no rounding.
+     This is intentional — rounded corners feel digital and soft.
+     We want structured, precise, paper-like.
+     -------------------------------------------------------------------------- */
+
+  --radius-none: 0;
+  --radius-xs:   1px;    /* barely there — sharp but not harsh */
+  --radius-sm:   2px;    /* tags, badges, small elements */
+  --radius-md:   4px;    /* cards — the main radius */
+  --radius-lg:   6px;    /* modals, larger containers */
+  --radius-xl:   8px;    /* only for floating elements */
+  --radius-full: 9999px; /* pills — used sparingly */
+
+  /* --------------------------------------------------------------------------
+     5. SHADOWS
+     
+     Warm shadows, not grey/blue. The shadow tint matches our dark text colour.
+     "Receipt stack" shadow gives depth like a pile of paper.
+     -------------------------------------------------------------------------- */
+
+  --shadow-none: none;
+  --shadow-xs:   0 1px 2px rgba(28, 26, 23, 0.06);
+  --shadow-sm:   0 1px 4px rgba(28, 26, 23, 0.08);
+  --shadow-md:   0 4px 12px rgba(28, 26, 23, 0.10);
+  --shadow-lg:   0 8px 24px rgba(28, 26, 23, 0.12);
+  --shadow-xl:   0 16px 40px rgba(28, 26, 23, 0.14);
+
+  /* The signature receipt shadow — offset like a stack of paper */
+  --shadow-receipt: 2px 3px 0px rgba(28, 26, 23, 0.10),
+                    4px 6px 0px rgba(28, 26, 23, 0.05);
+
+  /* Elevated card (hover state) */
+  --shadow-receipt-hover: 3px 5px 0px rgba(28, 26, 23, 0.14),
+                          6px 10px 0px rgba(28, 26, 23, 0.07);
+
+  /* Focus ring — accessibility */
+  --shadow-focus: 0 0 0 3px rgba(28, 26, 23, 0.2);
+
+  /* --------------------------------------------------------------------------
+     6. TRANSITIONS
+     
+     All animations use the same easing curve (ease-out — fast start,
+     soft landing, like paper settling) and consistent durations.
+     -------------------------------------------------------------------------- */
+
+  --ease-out:   cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in:    cubic-bezier(0.4, 0.0, 1, 1);
+  --ease-inout: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1); /* slight overshoot — for modals */
+
+  --duration-instant: 80ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    400ms;
+  --duration-slower:  600ms;
+
+  /* Shorthand for the most common transition */
+  --transition-base: all var(--duration-fast) var(--ease-out);
+  --transition-slow: all var(--duration-normal) var(--ease-out);
+
+  /* Typewriter cursor blink */
+  --typewriter-speed: 80ms;        /* ms per character */
+  --typewriter-cursor-blink: 530ms; /* cursor blink interval */
+
+  /* --------------------------------------------------------------------------
+     7. Z-INDEX LAYERS
+     
+     Naming layers prevents z-index wars (the bug where things randomly
+     appear on top of each other because someone used z-index: 9999).
+     -------------------------------------------------------------------------- */
+
+  --z-below:    -1;
+  --z-base:      0;
+  --z-raised:    10;   /* cards on hover */
+  --z-dropdown:  100;  /* dropdowns, tooltips */
+  --z-sticky:    200;  /* sticky navbar */
+  --z-overlay:   300;  /* modal backdrops */
+  --z-modal:     400;  /* modals */
+  --z-toast:     500;  /* notification toasts — always on top */
+
+  /* --------------------------------------------------------------------------
+     8. LAYOUT
+     -------------------------------------------------------------------------- */
+
+  --sidebar-width:       240px;
+  --navbar-height:       60px;
+  --content-max-width:   1200px;
+  --receipt-card-width:  280px;
+  --receipt-card-min-h:  320px;
+
+}
