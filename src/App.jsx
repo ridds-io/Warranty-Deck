@@ -35,7 +35,9 @@ import { ThemeProvider, useTheme }            from './context/ThemeContext'
 // Pages — loaded normally for now.
 // Later we can switch to React.lazy() for code splitting if the bundle
 // gets large, but for now keep it simple.
-import Landing        from './pages/Landing'
+import Landing             from './pages/Landing'
+import AuthCallback        from './pages/AuthCallback'
+import AuthSessionHandler  from './components/AuthSessionHandler'
 
 import { lazy, Suspense } from 'react'
 
@@ -231,6 +233,7 @@ function AppRoutes() {
       <ScrollToTop />
       <ThemeSynchroniser />
 
+      <AuthSessionHandler>
       <Routes>
 
         {/* ── PUBLIC ──────────────────────────────────────────────────────── */}
@@ -243,6 +246,9 @@ function AppRoutes() {
             </PublicRoute>
           }
         />
+
+        {/* OAuth / magic-link return — must match getAuthRedirectUrl() in supabase.js */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* ── PROTECTED ───────────────────────────────────────────────────── */}
 
@@ -334,6 +340,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
+      </AuthSessionHandler>
     </>
   )
 }

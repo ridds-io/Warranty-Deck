@@ -21,9 +21,11 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import {
   supabase,
   signInWithGoogle  as supabaseSignIn,
+  signInWithEmail   as supabaseSignInWithEmail,
   signOut           as supabaseSignOut,
   upsertUserProfile,
   fetchUserProfile,
+  consumeAuthCallbackError,
 } from '../lib/supabase'
 
 // -----------------------------------------------------------------------------
@@ -63,7 +65,8 @@ export function AuthProvider({ children }) {
 
   const [user,    setUser]    = useState(null)
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)  // start true — assume loading
+  const [loading, setLoading] = useState(true)
+  const [authCallbackError, setAuthCallbackError] = useState(() => consumeAuthCallbackError())
 
   // ---------------------------------------------------------------------------
   // FETCH AND SYNC PROFILE
@@ -82,35 +85,38 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Try to fetch existing profile
-    const { data: existingProfile, error } = await fetchUserProfile()
+    const { data: existingProfile, error: fetchError } = await fetchUserProfile()
+
+    if (fetchError) {
+      console.error('[WarrantyDeck] Failed to load user profile:', fetchError.message)
+      return
+    }
 
     if (existingProfile) {
-      // Profile exists — just load it into state
       setProfile(existingProfile)
+      return
+    }
+
+    // First login — create a profile from OAuth metadata or email.
+    const meta = authUser.user_metadata || {}
+    const emailLocal = authUser.email?.split('@')[0] || ''
+
+    const newProfileData = {
+      first_name:  meta.given_name  || meta.full_name?.split(' ')[0] || meta.name?.split(' ')[0] || emailLocal,
+      last_name:   meta.family_name || meta.full_name?.split(' ').slice(1).join(' ') || meta.name?.split(' ').slice(1).join(' ') || '',
+      avatar_url:  meta.avatar_url  || meta.picture || '',
+      theme:       'light',
+    }
+
+    const { data: newProfile, error: upsertError } = await upsertUserProfile(
+      authUser.id,
+      newProfileData
+    )
+
+    if (upsertError) {
+      console.error('[WarrantyDeck] Failed to create user profile:', upsertError.message)
     } else {
-      // No profile yet (first Google login) — create one from Google data.
-      // Google puts the user's name in user_metadata (set up in Supabase
-      // Google OAuth provider settings).
-      const googleMeta = authUser.user_metadata || {}
-
-      const newProfileData = {
-        first_name:  googleMeta.given_name  || googleMeta.full_name?.split(' ')[0] || '',
-        last_name:   googleMeta.family_name || googleMeta.full_name?.split(' ').slice(1).join(' ') || '',
-        avatar_url:  googleMeta.avatar_url  || googleMeta.picture || '',
-        theme:       'light',  // default theme on first login
-      }
-
-      const { data: newProfile, error: upsertError } = await upsertUserProfile(
-        authUser.id,
-        newProfileData
-      )
-
-      if (upsertError) {
-        console.error('[WarrantyDeck] Failed to create user profile:', upsertError.message)
-      } else {
-        setProfile(newProfile)
-      }
+      setProfile(newProfile)
     }
   }, [])
 
@@ -149,16 +155,12 @@ export function AuthProvider({ children }) {
 
     // Step 1: Check for existing session immediately
     supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+      .then(({ data: { session } }) => {
         const authUser = session?.user ?? null
         setUser(authUser)
-
-        // If there's a logged-in user, fetch their profile
         if (authUser) {
-          await syncProfile(authUser)
+          setTimeout(() => syncProfile(authUser), 0)
         }
-
-        // Done checking — hide the loading screen
         didFinishInitialCheck = true
         setLoading(false)
       })
@@ -168,23 +170,24 @@ export function AuthProvider({ children }) {
         setLoading(false)
       })
 
-    // Step 2: Listen for future auth changes
+    // Step 2: Listen for future auth changes.
+    // Do NOT await Supabase calls here — that deadlocks OAuth/magic-link callbacks.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         const authUser = session?.user ?? null
-
-        if (event === 'SIGNED_IN') {
-          setUser(authUser)
-          await syncProfile(authUser)
-        }
 
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
+        } else {
+          setUser(authUser)
+          if (authUser) {
+            setTimeout(() => syncProfile(authUser), 0)
+          } else {
+            setProfile(null)
+          }
         }
 
-        // For any event, make sure loading is false
-        // (handles edge case where redirect takes longer than getSession)
         setLoading(false)
       }
     )
@@ -196,8 +199,7 @@ export function AuthProvider({ children }) {
       subscription.unsubscribe()
     }
 
-  }, [syncProfile]) // syncProfile in deps array because ESLint requires it
-                    // useCallback above ensures it doesn't cause infinite loops
+  }, [syncProfile])
 
   // ---------------------------------------------------------------------------
   // PUBLIC ACTIONS
@@ -212,8 +214,17 @@ export function AuthProvider({ children }) {
    * Redirects the page — no return value needed.
    */
   const handleSignIn = useCallback(async () => {
-    await supabaseSignIn()
-    // Page will redirect to Google — code after this won't run
+    const { error } = await supabaseSignIn()
+    return { error }
+  }, [])
+
+  /**
+   * Trigger email magic-link login.
+   */
+  const handleSignInWithEmail = useCallback(async (email) => {
+    if (!email) return { error: { message: 'Email is required' } }
+    const { error } = await supabaseSignInWithEmail(email)
+    return { error }
   }, [])
 
   /**
@@ -249,12 +260,19 @@ export function AuthProvider({ children }) {
   // directly, or components could corrupt the auth state.
   // ---------------------------------------------------------------------------
 
+  const clearAuthCallbackError = useCallback(() => {
+    setAuthCallbackError(null)
+  }, [])
+
   const contextValue = {
     user,              // Supabase auth user (id, email, user_metadata)
     profile,           // user_profiles row (first_name, theme, etc.)
     loading,           // true while checking initial session
     isAuthenticated: !!user,  // boolean shorthand — avoids null checks everywhere
+    authCallbackError,
+    clearAuthCallbackError,
     signIn:  handleSignIn,
+    signInWithEmail: handleSignInWithEmail,
     signOut: handleSignOut,
     refreshProfile,
   }

@@ -14,7 +14,6 @@
 // =============================================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 // =============================================================================
@@ -305,12 +304,73 @@ function useTypewriter(text, speed = 60, startDelay = 0) {
 // SECTION 1 — HERO
 // =============================================================================
 
-function HeroSection({ onSignIn }) {
+function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCallbackError }) {
   const [hookText, hookDone] = useTypewriter(
     "WarrantyDeck will make sure you're not one of them.",
     45,
     600
   )
+
+  const [email, setEmail] = useState('')
+  const [emailStatus, setEmailStatus] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const message = params.get('auth_error')
+    if (!message) return
+    setAuthError(decodeURIComponent(message))
+    window.history.replaceState(null, '', '/')
+  }, [])
+
+  const handleGoogleSignIn = useCallback(async () => {
+    setAuthError('')
+    setEmailError('')
+    setEmailStatus('')
+    onClearAuthCallbackError?.()
+
+    try {
+      const result = await onSignIn()
+      if (result?.error) {
+        setAuthError(result.error.message || 'Google sign-in failed.')
+      }
+    } catch (err) {
+      setAuthError(err?.message || 'Google sign-in failed.')
+    }
+  }, [onSignIn])
+
+  const handleEmailSubmit = useCallback(async (event) => {
+    event?.preventDefault?.()
+    setEmailError('')
+    setEmailStatus('')
+    setAuthError('')
+    onClearAuthCallbackError?.()
+
+    const trimmed = email.trim()
+    if (!trimmed) {
+      setEmailError('Please enter a valid email address.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const result = await onEmailSignIn(trimmed)
+      if (result?.error) {
+        setEmailError(result.error.message || 'Unable to send magic link.')
+        return
+      }
+      setEmailStatus('Magic link sent. Check your inbox to continue.')
+    } catch (err) {
+      setEmailError(err?.message || 'Unable to send magic link.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [email, onEmailSignIn])
+
+  const authFeedback = authCallbackError || authError || emailError || emailStatus
+  const showAuthBlock = hookDone || authFeedback || isSubmitting
 
   return (
     <section style={{
@@ -454,14 +514,15 @@ function HeroSection({ onSignIn }) {
           borderTop: '1px dashed var(--color-border-dashed)',
         }} />
 
-        {/* Auth block */}
+        {/* Auth block — stay visible when showing feedback (opacity was hiding success/errors) */}
         <div style={{
           display:       'flex',
           flexDirection: 'column',
           gap:           'var(--space-3)',
-          opacity:       hookDone ? 1 : 0,
-          transform:     hookDone ? 'translateY(0)' : 'translateY(8px)',
+          opacity:       showAuthBlock ? 1 : 0,
+          transform:     showAuthBlock ? 'translateY(0)' : 'translateY(8px)',
           transition:    'opacity 0.4s ease, transform 0.4s ease',
+          pointerEvents: showAuthBlock ? 'auto' : 'none',
         }}>
 
           {/* Label */}
@@ -477,7 +538,9 @@ function HeroSection({ onSignIn }) {
 
           {/* Google sign-in button */}
           <button
-            onClick={onSignIn}
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isSubmitting}
             style={{
               display:         'flex',
               alignItems:      'center',
@@ -492,9 +555,10 @@ function HeroSection({ onSignIn }) {
               fontSize:        'var(--text-sm)',
               fontWeight:      '500',
               letterSpacing:   'var(--tracking-wide)',
-              cursor:          'pointer',
+              cursor:          isSubmitting ? 'not-allowed' : 'pointer',
               transition:      'var(--transition-base)',
               width:           '100%',
+              opacity:         isSubmitting ? 0.7 : 1,
             }}
             onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
@@ -534,58 +598,77 @@ function HeroSection({ onSignIn }) {
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border-soft)' }} />
           </div>
 
-          {/* Email input — visual only for now, Google OAuth is the primary path */}
-          <input
-            type="email"
-            placeholder="your@email.com"
-            style={{
-              padding:         'var(--space-3) var(--space-4)',
-              backgroundColor: 'var(--color-bg-inset)',
-              border:          '1px solid var(--color-border-strong)',
-              borderRadius:    'var(--radius-md)',
-              fontFamily:      'var(--font-mono)',
-              fontSize:        'var(--text-sm)',
-              color:           'var(--color-text-primary)',
-              outline:         'none',
-              transition:      'var(--transition-base)',
-              width:           '100%',
-              boxSizing:       'border-box',
-            }}
-            onFocus={e => {
-              e.currentTarget.style.borderColor = 'var(--color-border-focus)'
-              e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
-            }}
-            onBlur={e => {
-              e.currentTarget.style.borderColor = 'var(--color-border-strong)'
-              e.currentTarget.style.boxShadow   = 'none'
-            }}
-          />
+          <form onSubmit={handleEmailSubmit} style={{ display: 'grid', gap: 'var(--space-3)' }}>
+            <input
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              style={{
+                padding:         'var(--space-3) var(--space-4)',
+                backgroundColor: 'var(--color-bg-inset)',
+                border:          '1px solid var(--color-border-strong)',
+                borderRadius:    'var(--radius-md)',
+                fontFamily:      'var(--font-mono)',
+                fontSize:        'var(--text-sm)',
+                color:           'var(--color-text-primary)',
+                outline:         'none',
+                transition:      'var(--transition-base)',
+                width:           '100%',
+                boxSizing:       'border-box',
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = 'var(--color-border-focus)'
+                e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                e.currentTarget.style.boxShadow   = 'none'
+              }}
+              autoComplete="email"
+              disabled={isSubmitting}
+            />
 
-          <button
-            style={{
-              padding:         'var(--space-3) var(--space-6)',
-              backgroundColor: 'transparent',
-              color:           'var(--color-text-primary)',
-              border:          '1px solid var(--color-border-strong)',
-              borderRadius:    'var(--radius-md)',
-              fontFamily:      'var(--font-mono)',
-              fontSize:        'var(--text-sm)',
-              letterSpacing:   'var(--tracking-wide)',
-              cursor:          'pointer',
-              transition:      'var(--transition-base)',
-              width:           '100%',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'
-              e.currentTarget.style.borderColor      = 'var(--color-border-focus)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.borderColor      = 'var(--color-border-strong)'
-            }}
-          >
-            Register with email →
-          </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                padding:         'var(--space-3) var(--space-6)',
+                backgroundColor: 'transparent',
+                color:           'var(--color-text-primary)',
+                border:          '1px solid var(--color-border-strong)',
+                borderRadius:    'var(--radius-md)',
+                fontFamily:      'var(--font-mono)',
+                fontSize:        'var(--text-sm)',
+                letterSpacing:   'var(--tracking-wide)',
+                cursor:          isSubmitting ? 'not-allowed' : 'pointer',
+                transition:      'var(--transition-base)',
+                width:           '100%',
+                opacity:         isSubmitting ? 0.7 : 1,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'
+                e.currentTarget.style.borderColor      = 'var(--color-border-focus)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.borderColor      = 'var(--color-border-strong)'
+              }}
+            >
+              Continue with email →
+            </button>
+          </form>
+
+          {authFeedback && (
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize:   'var(--text-xs)',
+              color:      (authError || emailError) ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+              textAlign:  'center',
+            }}>
+              {authFeedback}
+            </div>
+          )}
 
           <p style={{
             fontFamily: 'var(--font-mono)',
@@ -595,9 +678,23 @@ function HeroSection({ onSignIn }) {
             textAlign:  'center',
           }}>
             Already have an account?{' '}
-            <span style={{ color: 'var(--color-text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}>
+            <button
+              type="button"
+              onClick={handleEmailSubmit}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+                fontFamily: 'inherit',
+                fontSize: 'inherit',
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
               Sign in
-            </span>
+            </button>
           </p>
         </div>
 
@@ -1111,11 +1208,16 @@ function Footer() {
 // =============================================================================
 
 export default function Landing() {
-  const { signIn } = useAuth()
+  const { signIn, signInWithEmail, authCallbackError, clearAuthCallbackError } = useAuth()
 
   return (
     <div style={{ backgroundColor: 'var(--color-bg-base)' }}>
-      <HeroSection onSignIn={signIn} />
+      <HeroSection
+        onSignIn={signIn}
+        onEmailSignIn={signInWithEmail}
+        authCallbackError={authCallbackError}
+        onClearAuthCallbackError={clearAuthCallbackError}
+      />
       <ReceiptSection />
       <HowToSection />
       <Footer />

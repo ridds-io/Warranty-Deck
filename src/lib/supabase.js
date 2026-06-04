@@ -187,8 +187,7 @@ export async function fetchUserProfile() {
     .from('user_profiles')
     .select('*')
     .eq('user_id', user.id)
-    .single() // .single() returns one object instead of an array
-               // throws an error if 0 or 2+ rows are found
+    .maybeSingle() // null when no profile yet (first login)
 }
 
 /**
@@ -216,6 +215,53 @@ export async function upsertUserProfile(userId, profileData) {
 // =============================================================================
 
 /**
+ * Absolute site origin for auth redirects. Must include https:// — if Supabase's
+ * Site URL is set to a hostname without https:// (or the wrong Vercel project),
+ * redirects become https://<project>.supabase.co/your-hostname → "requested path is invalid".
+ *
+ * Set VITE_SITE_URL in Vercel/local .env to your full production URL.
+ */
+export function getAppOrigin() {
+  const configured = import.meta.env.VITE_SITE_URL?.trim()
+  if (configured) {
+    const withScheme = /^https?:\/\//i.test(configured)
+      ? configured
+      : `https://${configured}`
+    return withScheme.replace(/\/$/, '')
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null') {
+    return window.location.origin
+  }
+
+  return 'http://localhost:5173'
+}
+
+/**
+ * Where Supabase sends users after Google OAuth or email magic links.
+ * Uses site root so Vercel always serves the SPA; AuthSessionHandler reads tokens from the URL.
+ */
+export function getAuthRedirectUrl() {
+  return `${getAppOrigin()}/`
+}
+
+/**
+ * Read and clear an auth error left in the URL after a failed OAuth/magic-link redirect.
+ * Supabase appends #error=...&error_description=... on failure.
+ */
+export function consumeAuthCallbackError() {
+  const raw = window.location.hash.replace(/^#/, '') || window.location.search.replace(/^\?/, '')
+  if (!raw) return null
+
+  const params = new URLSearchParams(raw)
+  const description = params.get('error_description') || params.get('error')
+  if (!description) return null
+
+  window.history.replaceState(null, '', window.location.pathname)
+  return decodeURIComponent(description.replace(/\+/g, ' '))
+}
+
+/**
  * Sign in with Google OAuth.
  * Redirects the user to Google's login page.
  * On return, Supabase handles the session automatically (detectSessionInUrl: true).
@@ -227,7 +273,7 @@ export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/dashboard`,
+      redirectTo: getAuthRedirectUrl(),
       queryParams: {
         // Request these scopes from Google — we only need basic profile info
         access_type: 'offline',
@@ -240,7 +286,28 @@ export async function signInWithGoogle() {
     console.error('[WarrantyDeck] Google sign-in failed:', error.message)
     return { error }
   }
-  // No return needed — the page will redirect to Google
+  return { error: null }
+}
+
+/**
+ * Sign in with email (magic link).
+ * Sends a one-time link that signs the user in on click.
+ */
+export async function signInWithEmail(email) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: getAuthRedirectUrl(),
+    },
+  })
+
+  if (error) {
+    console.error('[WarrantyDeck] Email sign-in failed:', error.message)
+    return { error }
+  }
+
+  return { error: null }
 }
 
 /**
