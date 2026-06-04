@@ -19,6 +19,7 @@ export default function DashboardView({
   receiptsLoading = false,
   warrantiesLoading = false,
   preview = false,
+  profileSyncError = null,
 }) {
   const navigate = useNavigate()
 
@@ -34,6 +35,28 @@ export default function DashboardView({
 
   return (
     <PageWrapper title="Dashboard">
+      {!preview && profileSyncError && (
+        <div
+          style={{
+            marginBottom: 'var(--space-6)',
+            padding: 'var(--space-4)',
+            backgroundColor: 'var(--color-danger-bg)',
+            border: '1px solid var(--color-danger)',
+            borderRadius: 'var(--radius-md)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-danger)',
+          }}
+        >
+          Profile not saved to database: {profileSyncError}
+          <div style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)' }}>
+            In Supabase → SQL Editor, run the script{' '}
+            <code style={{ fontFamily: 'inherit' }}>supabase/user_profiles_policies.sql</code>
+            , then sign out and sign in again.
+          </div>
+        </div>
+      )}
+
       {preview && (
         <div
           style={{

@@ -181,10 +181,19 @@ export function isProfileNotFoundError(error) {
  * Fetch a profile row by auth user id (does not call getUser — avoids session timing races).
  */
 export async function fetchUserProfileByUserId(userId) {
-  return supabase
+  const byUserId = await supabase
     .from('user_profiles')
     .select('*')
     .eq('user_id', userId)
+    .maybeSingle()
+
+  if (byUserId.data || !byUserId.error) return byUserId
+
+  // Some schemas use id = auth.users.id instead of user_id
+  return supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
     .maybeSingle()
 }
 
@@ -212,23 +221,60 @@ export async function fetchUserProfile(userId) {
  * @param {object} profileData - { first_name, last_name, avatar_url, theme, ... }
  * @returns {Promise<{data: object|null, error: object|null}>}
  */
+function formatProfileError(error) {
+  if (!error) return ''
+  return [error.message, error.code, error.details, error.hint].filter(Boolean).join(' — ')
+}
+
+/**
+ * Try several insert shapes — handles missing columns (theme/avatar) or id vs user_id PKs.
+ */
 export async function upsertUserProfile(userId, profileData) {
-  const row = {
-    user_id: userId,
-    first_name: profileData.first_name ?? '',
-    last_name:  profileData.last_name ?? '',
-    theme:      profileData.theme ?? 'light',
+  const first_name = profileData.first_name ?? ''
+  const last_name  = profileData.last_name ?? ''
+  const theme      = profileData.theme ?? 'light'
+  const avatar_url = profileData.avatar_url || null
+
+  const attempts = [
+    {
+      label: 'upsert user_id + theme + avatar',
+      run: () => supabase.from('user_profiles').upsert(
+        { user_id: userId, first_name, last_name, theme, ...(avatar_url && { avatar_url }) },
+        { onConflict: 'user_id' }
+      ).select().single(),
+    },
+    {
+      label: 'upsert user_id minimal',
+      run: () => supabase.from('user_profiles').upsert(
+        { user_id: userId, first_name, last_name },
+        { onConflict: 'user_id' }
+      ).select().single(),
+    },
+    {
+      label: 'insert user_id',
+      run: () => supabase.from('user_profiles').insert(
+        { user_id: userId, first_name, last_name, theme }
+      ).select().single(),
+    },
+    {
+      label: 'upsert id column',
+      run: () => supabase.from('user_profiles').upsert(
+        { id: userId, first_name, last_name, theme },
+        { onConflict: 'id' }
+      ).select().single(),
+    },
+  ]
+
+  let lastError = null
+
+  for (const attempt of attempts) {
+    const { data, error } = await attempt.run()
+    if (!error) return { data, error: null }
+    lastError = error
+    console.warn(`[WarrantyDeck] Profile ${attempt.label} failed:`, formatProfileError(error))
   }
 
-  if (profileData.avatar_url) {
-    row.avatar_url = profileData.avatar_url
-  }
-
-  return supabase
-    .from('user_profiles')
-    .upsert(row, { onConflict: 'user_id' })
-    .select()
-    .single()
+  return { data: null, error: lastError }
 }
 
 // =============================================================================

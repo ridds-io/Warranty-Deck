@@ -10,7 +10,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import DashboardView from './DashboardView'
 
 export default function Dashboard() {
-  const { profile } = useAuth()
+  const { profile, profileSyncError } = useAuth()
   const { receipts, loading: receiptsLoading } = useReceipts()
   const { warranties, loading: warrantiesLoading } = useWarranties()
   const { notifications } = useNotifications()
@@ -18,6 +18,7 @@ export default function Dashboard() {
   return (
     <DashboardView
       profile={profile}
+      profileSyncError={profileSyncError}
       receipts={receipts}
       warranties={warranties}
       notifications={notifications}

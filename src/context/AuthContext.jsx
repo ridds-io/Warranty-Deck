@@ -20,7 +20,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import {
   supabase,
-  signInWithGoogle  as supabaseSignIn,
+  signInWithGoogle as supabaseSignIn,
   signInWithEmail   as supabaseSignInWithEmail,
   signOut           as supabaseSignOut,
   upsertUserProfile,
@@ -68,6 +68,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [authCallbackError, setAuthCallbackError] = useState(() => consumeAuthCallbackError())
+  const [profileSyncError, setProfileSyncError] = useState(null)
 
   // ---------------------------------------------------------------------------
   // FETCH AND SYNC PROFILE
@@ -83,6 +84,16 @@ export function AuthProvider({ children }) {
   const syncProfile = useCallback(async (authUser) => {
     if (!authUser) {
       setProfile(null)
+      setProfileSyncError(null)
+      return
+    }
+
+    setProfileSyncError(null)
+
+    // Wait until the access token is attached to the Supabase client
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) {
+      setProfileSyncError('Session not ready yet. Refresh the page or sign in again.')
       return
     }
 
@@ -101,7 +112,6 @@ export function AuthProvider({ children }) {
       )
     }
 
-    // First login — create a profile from OAuth metadata or email.
     const meta = authUser.user_metadata || {}
     const emailLocal = authUser.email?.split('@')[0] || ''
 
@@ -118,15 +128,24 @@ export function AuthProvider({ children }) {
     )
 
     if (upsertError) {
-      console.error(
-        '[WarrantyDeck] Failed to create user profile:',
+      const message = [
         upsertError.message,
         upsertError.code,
-        upsertError.details,
-        upsertError.hint
+        upsertError.hint,
+      ].filter(Boolean).join(' — ')
+      setProfileSyncError(
+        message || 'Could not save your profile. Run supabase/user_profiles_policies.sql in the SQL Editor.'
       )
-    } else {
-      setProfile(newProfile)
+      console.error('[WarrantyDeck] Failed to create user profile:', upsertError)
+      return
+    }
+
+    setProfile(newProfile)
+
+    // DB trigger may have created the row; re-fetch if upsert returned nothing
+    if (!newProfile) {
+      const { data: refetched } = await fetchUserProfileByUserId(authUser.id)
+      if (refetched) setProfile(refetched)
     }
   }, [])
 
@@ -172,6 +191,7 @@ export function AuthProvider({ children }) {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
+          setProfileSyncError(null)
           setLoading(false)
           return
         }
@@ -271,6 +291,7 @@ export function AuthProvider({ children }) {
     loading,           // true while checking initial session
     isAuthenticated: !!user,  // boolean shorthand — avoids null checks everywhere
     authCallbackError,
+    profileSyncError,
     clearAuthCallbackError,
     signIn:  handleSignIn,
     signInWithEmail: handleSignInWithEmail,
