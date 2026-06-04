@@ -37,6 +37,7 @@ import { ThemeProvider, useTheme }            from './context/ThemeContext'
 // gets large, but for now keep it simple.
 import Landing             from './pages/Landing'
 import AuthCallback        from './pages/AuthCallback'
+import DashboardPreview    from './pages/DashboardPreview'
 import AuthSessionHandler  from './components/AuthSessionHandler'
 
 import { lazy, Suspense } from 'react'
@@ -132,23 +133,89 @@ function ScrollToTop() {
 //   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 // =============================================================================
 
+function SignInRequired() {
+  return (
+    <div style={{
+      minHeight:       '100vh',
+      backgroundColor: 'var(--color-bg-base)',
+      display:         'flex',
+      flexDirection:   'column',
+      alignItems:      'center',
+      justifyContent:  'center',
+      gap:             'var(--space-6)',
+      padding:         'var(--space-8)',
+      textAlign:       'center',
+    }}>
+      <div style={{
+        fontFamily:    'var(--font-mono)',
+        fontSize:      'var(--text-xs)',
+        letterSpacing: 'var(--tracking-widest)',
+        color:         'var(--color-text-tertiary)',
+        textTransform: 'uppercase',
+      }}>
+        WarrantyDeck
+      </div>
+      <h1 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize:   'var(--text-2xl)',
+        margin:     0,
+      }}>
+        Sign in to open the dashboard
+      </h1>
+      <p style={{
+        fontFamily: 'var(--font-body)',
+        fontSize:   'var(--text-sm)',
+        color:      'var(--color-text-secondary)',
+        maxWidth:   '360px',
+        margin:     0,
+      }}>
+        This page is only available after Google or email sign-in. Your session may have expired.
+      </p>
+      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <a
+          href="/"
+          style={{
+            fontFamily:      'var(--font-mono)',
+            fontSize:        'var(--text-sm)',
+            padding:         'var(--space-3) var(--space-6)',
+            backgroundColor: 'var(--color-accent)',
+            color:           'var(--color-text-inverse)',
+            borderRadius:    'var(--radius-md)',
+            textDecoration:  'none',
+          }}
+        >
+          Go to sign in
+        </a>
+        <a
+          href="/preview/dashboard"
+          style={{
+            fontFamily:     'var(--font-mono)',
+            fontSize:       'var(--text-sm)',
+            padding:        'var(--space-3) var(--space-6)',
+            color:          'var(--color-text-primary)',
+            border:         '1px solid var(--color-border-strong)',
+            borderRadius:   'var(--radius-md)',
+            textDecoration: 'none',
+          }}
+        >
+          Preview dashboard UI
+        </a>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
 
-  // Still checking if a session exists — show loading screen
-  // This prevents the landing page flashing before auth is confirmed
   if (loading) {
     return <AppLoadingScreen />
   }
 
-  // No session found — redirect to landing page
-  // `replace` means the /dashboard URL is replaced in history, not pushed.
-  // So the user can't click "back" to get to a protected page while logged out.
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />
+    return <SignInRequired />
   }
 
-  // Authenticated — render the actual page
   return children
 }
 
@@ -249,6 +316,9 @@ function AppRoutes() {
 
         {/* OAuth / magic-link return — must match getAuthRedirectUrl() in supabase.js */}
         <Route path="/auth/callback" element={<AuthCallback />} />
+
+        {/* UI preview — no auth, sample data (for design review / debugging deploy) */}
+        <Route path="/preview/dashboard" element={<DashboardPreview />} />
 
         {/* ── PROTECTED ───────────────────────────────────────────────────── */}
 

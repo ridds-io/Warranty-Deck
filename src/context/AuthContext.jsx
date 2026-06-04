@@ -24,7 +24,8 @@ import {
   signInWithEmail   as supabaseSignInWithEmail,
   signOut           as supabaseSignOut,
   upsertUserProfile,
-  fetchUserProfile,
+  fetchUserProfileByUserId,
+  isProfileNotFoundError,
   consumeAuthCallbackError,
 } from '../lib/supabase'
 
@@ -85,16 +86,19 @@ export function AuthProvider({ children }) {
       return
     }
 
-    const { data: existingProfile, error: fetchError } = await fetchUserProfile()
-
-    if (fetchError) {
-      console.error('[WarrantyDeck] Failed to load user profile:', fetchError.message)
-      return
-    }
+    const { data: existingProfile, error: fetchError } = await fetchUserProfileByUserId(authUser.id)
 
     if (existingProfile) {
       setProfile(existingProfile)
       return
+    }
+
+    if (fetchError && !isProfileNotFoundError(fetchError)) {
+      console.warn(
+        '[WarrantyDeck] Profile lookup failed, will still try to create:',
+        fetchError.message,
+        fetchError.code
+      )
     }
 
     // First login — create a profile from OAuth metadata or email.
@@ -114,7 +118,13 @@ export function AuthProvider({ children }) {
     )
 
     if (upsertError) {
-      console.error('[WarrantyDeck] Failed to create user profile:', upsertError.message)
+      console.error(
+        '[WarrantyDeck] Failed to create user profile:',
+        upsertError.message,
+        upsertError.code,
+        upsertError.details,
+        upsertError.hint
+      )
     } else {
       setProfile(newProfile)
     }
@@ -143,35 +153,18 @@ export function AuthProvider({ children }) {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    let didFinishInitialCheck = false
+    let initialSessionHandled = false
 
-    // Safety net: if getSession never resolves, don't block the app forever.
+    // Safety net if INITIAL_SESSION never fires (network/offline edge cases).
     const fallbackTimer = setTimeout(() => {
-      if (!didFinishInitialCheck) {
+      if (!initialSessionHandled) {
         console.error('[WarrantyDeck] Auth session check timed out. Showing app anyway.')
         setLoading(false)
       }
     }, 5000)
 
-    // Step 1: Check for existing session immediately
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        const authUser = session?.user ?? null
-        setUser(authUser)
-        if (authUser) {
-          setTimeout(() => syncProfile(authUser), 0)
-        }
-        didFinishInitialCheck = true
-        setLoading(false)
-      })
-      .catch((error) => {
-        console.error('[WarrantyDeck] Failed to get session:', error)
-        didFinishInitialCheck = true
-        setLoading(false)
-      })
-
-    // Step 2: Listen for future auth changes.
-    // Do NOT await Supabase calls here — that deadlocks OAuth/magic-link callbacks.
+    // Use onAuthStateChange (INITIAL_SESSION) as the source of truth — getSession()
+    // alone can return null on a fresh page load before the client finishes hydrating.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const authUser = session?.user ?? null
@@ -179,27 +172,35 @@ export function AuthProvider({ children }) {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
-        } else {
-          setUser(authUser)
-          if (authUser) {
-            setTimeout(() => syncProfile(authUser), 0)
-          } else {
-            setProfile(null)
-          }
+          setLoading(false)
+          return
         }
 
-        setLoading(false)
+        setUser(authUser)
+
+        if (!authUser) {
+          setProfile(null)
+        }
+
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          initialSessionHandled = true
+          setLoading(false)
+        }
       }
     )
 
-    // Cleanup: unsubscribe when AuthProvider unmounts.
-    // Without this, old listeners pile up and cause memory leaks.
     return () => {
       clearTimeout(fallbackTimer)
       subscription.unsubscribe()
     }
 
   }, [syncProfile])
+
+  // Create/load profile whenever we have a signed-in user (runs after session is ready).
+  useEffect(() => {
+    if (!user) return
+    syncProfile(user)
+  }, [user, syncProfile])
 
   // ---------------------------------------------------------------------------
   // PUBLIC ACTIONS
@@ -248,7 +249,7 @@ export function AuthProvider({ children }) {
    */
   const refreshProfile = useCallback(async () => {
     if (!user) return
-    const { data } = await fetchUserProfile()
+    const { data } = await fetchUserProfileByUserId(user.id)
     if (data) setProfile(data)
   }, [user])
 

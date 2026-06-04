@@ -171,41 +171,62 @@ export async function deleteReceiptFile(filePath) {
 // Callers check: if (error) { show error } else { use data }
 // =============================================================================
 
+/** True when the profile row simply does not exist yet (not a permissions failure). */
+export function isProfileNotFoundError(error) {
+  if (!error) return false
+  return error.code === 'PGRST116' || /0 rows/i.test(error.message ?? '')
+}
+
 /**
- * Fetch the current authenticated user's profile from user_profiles.
- * Returns null if not logged in or profile doesn't exist yet.
- *
- * @returns {Promise<{data: object|null, error: object|null}>}
+ * Fetch a profile row by auth user id (does not call getUser — avoids session timing races).
  */
-export async function fetchUserProfile() {
-  // First get the current session to find the user's ID
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return { data: null, error: { message: 'Not authenticated' } }
-
+export async function fetchUserProfileByUserId(userId) {
   return supabase
     .from('user_profiles')
     .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle() // null when no profile yet (first login)
+    .eq('user_id', userId)
+    .maybeSingle()
+}
+
+/**
+ * Fetch the current authenticated user's profile from user_profiles.
+ *
+ * @param {string} [userId] - Optional; pass from AuthContext to avoid getUser() races after login.
+ * @returns {Promise<{data: object|null, error: object|null}>}
+ */
+export async function fetchUserProfile(userId) {
+  if (userId) return fetchUserProfileByUserId(userId)
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) return { data: null, error: authError }
+  if (!user) return { data: null, error: { message: 'Not authenticated' } }
+
+  return fetchUserProfileByUserId(user.id)
 }
 
 /**
  * Create or update a user's profile.
  * Uses upsert — inserts if the row doesn't exist, updates if it does.
- * Called after Google OAuth login to save the user's name and avatar.
  *
  * @param {string} userId
  * @param {object} profileData - { first_name, last_name, avatar_url, theme, ... }
  * @returns {Promise<{data: object|null, error: object|null}>}
  */
 export async function upsertUserProfile(userId, profileData) {
+  const row = {
+    user_id: userId,
+    first_name: profileData.first_name ?? '',
+    last_name:  profileData.last_name ?? '',
+    theme:      profileData.theme ?? 'light',
+  }
+
+  if (profileData.avatar_url) {
+    row.avatar_url = profileData.avatar_url
+  }
+
   return supabase
     .from('user_profiles')
-    .upsert(
-      { user_id: userId, ...profileData, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' } // if user_id already exists, update instead of insert
-    )
+    .upsert(row, { onConflict: 'user_id' })
     .select()
     .single()
 }

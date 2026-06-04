@@ -2,7 +2,7 @@
 
 Never lose a receipt again. Warranty Deck is your personal digital vault for managing warranties, receipts, and product information.
 
-**🌐 Try it now**: [https://warranty-deck-seven.vercel.app/](https://warranty-deck-seven.vercel.app/)
+**🌐 Try it now**: [https://warranty-deck.vercel.app/](https://warranty-deck.vercel.app/)
 
 ## 🎯 What is Warranty Deck?
 
@@ -61,7 +61,7 @@ Warranty Deck solves a universal problem: losing receipts and missing warranty c
 
 ## 🚀 How to Get Started
 
-1. Visit [https://warranty-deck-seven.vercel.app/](https://warranty-deck-seven.vercel.app/)
+1. Visit [https://warranty-deck.vercel.app/](https://warranty-deck.vercel.app/)
 2. Click "Sign in with Google"
 3. Authenticate with your Google account
 4. Your profile is automatically created
@@ -85,4 +85,4 @@ Warranty Deck solves a universal problem: losing receipts and missing warranty c
 ---
 
 **Ready to take control of your warranties?**  
-Visit [https://warranty-deck-seven.vercel.app/](https://warranty-deck-seven.vercel.app/) and get started today.
+Visit [https://warranty-deck.vercel.app/](https://warranty-deck.vercel.app/) and get started today.

@@ -27,7 +27,9 @@ export async function completeAuthFromUrl() {
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (error) return { session: null, error }
-    return { session: data.session, error: null }
+
+    const { data: { session: verified } } = await supabase.auth.getSession()
+    return { session: verified ?? data.session, error: null }
   }
 
   // Implicit / magic-link: allow the client to parse the hash, then read session.

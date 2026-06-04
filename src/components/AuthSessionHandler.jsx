@@ -1,7 +1,9 @@
-// Runs before routes when the URL contains OAuth/magic-link tokens.
-// Prevents redirecting to "/" before the session is stored (which drops the hash).
+// Runs when the URL contains OAuth/magic-link tokens, completes sign-in,
+// then navigates to /dashboard once AuthContext has the session (no full reload).
 
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import {
   hasPendingAuthCallback,
   completeAuthFromUrl,
@@ -26,7 +28,10 @@ function AuthLoadingScreen() {
 }
 
 export default function AuthSessionHandler({ children }) {
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [processing, setProcessing] = useState(hasPendingAuthCallback)
+  const [awaitingDashboard, setAwaitingDashboard] = useState(false)
 
   useEffect(() => {
     if (!hasPendingAuthCallback()) return
@@ -41,22 +46,49 @@ export default function AuthSessionHandler({ children }) {
         clearAuthParamsFromUrl()
 
         if (session) {
-          // Full navigation so AuthProvider picks up the stored session before /dashboard renders.
-          window.location.replace('/dashboard')
+          setAwaitingDashboard(true)
           return
         }
 
         const message = error?.message || 'Sign-in link expired or is invalid. Please try again.'
-        window.location.replace(`/?auth_error=${encodeURIComponent(message)}`)
+        navigate(`/?auth_error=${encodeURIComponent(message)}`, { replace: true })
+        setProcessing(false)
       })
-      .finally(() => {
-        if (!cancelled) setProcessing(false)
+      .catch((err) => {
+        if (cancelled) return
+        const message = err?.message || 'Sign-in failed. Please try again.'
+        navigate(`/?auth_error=${encodeURIComponent(message)}`, { replace: true })
+        setProcessing(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [navigate])
+
+  // Wait until AuthContext has the user before going to /dashboard.
+  useEffect(() => {
+    if (!awaitingDashboard || !isAuthenticated) return
+    navigate('/dashboard', { replace: true })
+    setAwaitingDashboard(false)
+    setProcessing(false)
+  }, [awaitingDashboard, isAuthenticated, navigate])
+
+  // Session never reached context (e.g. storage blocked).
+  useEffect(() => {
+    if (!awaitingDashboard || isAuthenticated) return
+
+    const timeout = setTimeout(() => {
+      navigate(
+        `/?auth_error=${encodeURIComponent('Could not establish a session. Please try signing in again.')}`,
+        { replace: true }
+      )
+      setAwaitingDashboard(false)
+      setProcessing(false)
+    }, 4000)
+
+    return () => clearTimeout(timeout)
+  }, [awaitingDashboard, isAuthenticated, navigate])
 
   if (processing) return <AuthLoadingScreen />
   return children
