@@ -5,8 +5,8 @@
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
-// Vision model: Llama 4 Scout — native multimodal, replaces decommissioned llama-3.2-11b-vision-preview
-const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e'
+// Vision model: Qwen 3 32B — high-performance reasoning model with vision capabilities
+const VISION_MODEL = 'qwen/qwen3-32b'
 // Text/chat model: Llama 3.3 70B — best general-purpose model on Groq
 const CHAT_MODEL   = 'llama-3.3-70b-versatile'
 
