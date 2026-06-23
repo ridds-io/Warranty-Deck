@@ -5,8 +5,10 @@
 
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function ReceiptCard({ receipt, onOpen }) {
+  const { formatAmount } = useCurrency()
   return (
     <div
       style={{
@@ -75,7 +77,7 @@ export default function ReceiptCard({ receipt, onOpen }) {
             fontWeight: 600,
           }}
         >
-          ${Number.isFinite(receipt.totalAmount) ? receipt.totalAmount.toFixed(2) : '0.00'}
+          {formatAmount(receipt.totalAmount)}
         </div>
       </div>
 

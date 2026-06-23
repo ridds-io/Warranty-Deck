@@ -391,6 +391,59 @@ export async function signOut() {
 }
 
 /**
+ * Sign in with email and password.
+ * Creates a new user if they don't exist (requiresconfirmation: false).
+ * Otherwise authenticates an existing user.
+ */
+export async function signInWithPassword(email, password) {
+  if (!email || !password) {
+    return { error: { message: 'Email and password are required' } }
+  }
+
+  // Try to sign in first
+  const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (!signInError) {
+    return { error: null, data }
+  }
+
+  // If sign in fails with "Invalid login credentials", try sign up
+  if (signInError?.message?.includes('Invalid login credentials')) {
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: getAuthRedirectUrl(),
+      },
+    })
+
+    if (signUpError) {
+      console.error('[WarrantyDeck] Sign up failed:', signUpError.message)
+      return { error: signUpError }
+    }
+
+    // Auto sign in after signup
+    const { data: autoSignIn, error: autoSignInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (autoSignInError) {
+      console.error('[WarrantyDeck] Auto sign in after signup failed:', autoSignInError.message)
+      return { error: autoSignInError }
+    }
+
+    return { error: null, data: autoSignIn }
+  }
+
+  console.error('[WarrantyDeck] Email/password sign-in failed:', signInError.message)
+  return { error: signInError }
+}
+
+/**
  * Get the currently logged-in user synchronously from the cached session.
  * Use this for quick checks — it doesn't make a network request.
  * For the authoritative current user, use supabase.auth.getUser() instead.

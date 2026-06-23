@@ -34,6 +34,7 @@ function mapReceipt(row) {
     hasWarranty: Boolean(row.has_warranty || row.warranty_id),
     warrantyId: row.warranty_id || null,
     aiSummary: row.ai_summary || '',
+    imagePath: row.image_path || null,
     items: Array.isArray(row.receipt_items)
       ? row.receipt_items.map(item => ({
           name: item.item_name || item.name || 'Item',

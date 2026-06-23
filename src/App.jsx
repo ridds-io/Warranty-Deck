@@ -31,6 +31,7 @@ import { BrowserRouter, Routes, Route,
 
 import { AuthProvider, useAuth }              from './context/AuthContext'
 import { ThemeProvider, useTheme }            from './context/ThemeContext'
+import { CurrencyProvider }                   from './context/CurrencyContext'
 
 // Pages — loaded normally for now.
 // Later we can switch to React.lazy() for code splitting if the bundle
@@ -432,11 +433,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <Suspense fallback={<AppLoadingScreen />}>
-            <AppRoutes />
-          </Suspense> 
-        </AuthProvider>
+        <CurrencyProvider>
+          <AuthProvider>
+            <Suspense fallback={<AppLoadingScreen />}>
+              <AppRoutes />
+            </Suspense>
+          </AuthProvider>
+        </CurrencyProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

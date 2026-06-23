@@ -21,6 +21,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import {
   supabase,
   signInWithGoogle as supabaseSignIn,
+  signInWithPassword as supabaseSignInWithPassword,
   signInWithEmail   as supabaseSignInWithEmail,
   signOut           as supabaseSignOut,
   upsertUserProfile,
@@ -249,6 +250,15 @@ export function AuthProvider({ children }) {
   }, [])
 
   /**
+   * Sign in with email and password.
+   */
+  const handleSignInWithPassword = useCallback(async (email, password) => {
+    if (!email || !password) return { error: { message: 'Email and password are required' } }
+    const result = await supabaseSignInWithPassword(email, password)
+    return result
+  }, [])
+
+  /**
    * Log out the current user.
    * Clears state immediately so the UI updates before the redirect.
    */
@@ -295,6 +305,7 @@ export function AuthProvider({ children }) {
     clearAuthCallbackError,
     signIn:  handleSignIn,
     signInWithEmail: handleSignInWithEmail,
+    signInWithPassword: handleSignInWithPassword,
     signOut: handleSignOut,
     refreshProfile,
   }

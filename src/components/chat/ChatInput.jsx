@@ -6,11 +6,11 @@
 import { useState } from 'react'
 import Button from '../ui/Button'
 
-export default function ChatInput({ onSend }) {
+export default function ChatInput({ onSend, disabled }) {
   const [value, setValue] = useState('')
 
   const handleSend = () => {
-    if (!value.trim()) return
+    if (disabled || !value.trim()) return
     onSend?.(value.trim())
     setValue('')
   }
@@ -25,13 +25,16 @@ export default function ChatInput({ onSend }) {
         border: '1px solid var(--color-border-soft)',
         borderRadius: 'var(--radius-md)',
         backgroundColor: 'var(--color-bg-surface)',
+        opacity: disabled ? 0.6 : 1,
+        pointerEvents: disabled ? 'none' : 'auto',
       }}
     >
       <input
         type="text"
         value={value}
         onChange={e => setValue(e.target.value)}
-        placeholder="Ask about a receipt or warranty"
+        placeholder={disabled ? "AI is typing..." : "Ask about a receipt or warranty"}
+        disabled={disabled}
         style={{
           flex: 1,
           border: 'none',
@@ -45,7 +48,8 @@ export default function ChatInput({ onSend }) {
           if (e.key === 'Enter') handleSend()
         }}
       />
-      <Button size="sm" onClick={handleSend}>Send</Button>
+      <Button size="sm" onClick={handleSend} disabled={disabled}>Send</Button>
     </div>
   )
 }
+

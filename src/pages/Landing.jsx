@@ -304,7 +304,7 @@ function useTypewriter(text, speed = 60, startDelay = 0) {
 // SECTION 1 — HERO
 // =============================================================================
 
-function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCallbackError }) {
+function HeroSection({ onSignIn, onEmailSignIn, onPasswordSignIn, authCallbackError, onClearAuthCallbackError }) {
   const [hookText, hookDone] = useTypewriter(
     "WarrantyDeck will make sure you're not one of them.",
     45,
@@ -312,10 +312,12 @@ function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCa
   )
 
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [emailStatus, setEmailStatus] = useState('')
   const [emailError, setEmailError] = useState('')
   const [authError, setAuthError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loginMode, setLoginMode] = useState('google') // 'google', 'email', 'password'
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -368,6 +370,34 @@ function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCa
       setIsSubmitting(false)
     }
   }, [email, onEmailSignIn])
+
+  const handlePasswordSubmit = useCallback(async (event) => {
+    event?.preventDefault?.()
+    setEmailError('')
+    setEmailStatus('')
+    setAuthError('')
+    onClearAuthCallbackError?.()
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !password) {
+      setEmailError('Please enter both email and password.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const result = await onPasswordSignIn(trimmedEmail, password)
+      if (result?.error) {
+        setEmailError(result.error.message || 'Sign in failed.')
+        return
+      }
+      setEmailStatus('Signing you in...')
+    } catch (err) {
+      setEmailError(err?.message || 'Sign in failed.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [email, password, onPasswordSignIn])
 
   const authFeedback = authCallbackError || authError || emailError || emailStatus
   const showAuthBlock = hookDone || authFeedback || isSubmitting
@@ -598,66 +628,223 @@ function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCa
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border-soft)' }} />
           </div>
 
-          <form onSubmit={handleEmailSubmit} style={{ display: 'grid', gap: 'var(--space-3)' }}>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              style={{
-                padding:         'var(--space-3) var(--space-4)',
-                backgroundColor: 'var(--color-bg-inset)',
-                border:          '1px solid var(--color-border-strong)',
-                borderRadius:    'var(--radius-md)',
-                fontFamily:      'var(--font-mono)',
-                fontSize:        'var(--text-sm)',
-                color:           'var(--color-text-primary)',
-                outline:         'none',
-                transition:      'var(--transition-base)',
-                width:           '100%',
-                boxSizing:       'border-box',
-              }}
-              onFocus={e => {
-                e.currentTarget.style.borderColor = 'var(--color-border-focus)'
-                e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
-              }}
-              onBlur={e => {
-                e.currentTarget.style.borderColor = 'var(--color-border-strong)'
-                e.currentTarget.style.boxShadow   = 'none'
-              }}
-              autoComplete="email"
-              disabled={isSubmitting}
-            />
-
+          {/* Login mode tabs */}
+          <div style={{
+            display:     'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap:         'var(--space-2)',
+            marginBottom: 'var(--space-3)',
+          }}>
             <button
-              type="submit"
+              type="button"
+              onClick={() => { setLoginMode('email'); setEmailError(''); setPassword('') }}
               disabled={isSubmitting}
               style={{
-                padding:         'var(--space-3) var(--space-6)',
-                backgroundColor: 'transparent',
-                color:           'var(--color-text-primary)',
-                border:          '1px solid var(--color-border-strong)',
-                borderRadius:    'var(--radius-md)',
+                padding:         'var(--space-2) var(--space-3)',
+                backgroundColor: loginMode === 'email' ? 'var(--color-accent)' : 'transparent',
+                color:           loginMode === 'email' ? 'var(--color-text-inverse)' : 'var(--color-text-primary)',
+                border:          loginMode === 'email' ? 'none' : '1px solid var(--color-border-strong)',
+                borderRadius:    'var(--radius-sm)',
                 fontFamily:      'var(--font-mono)',
-                fontSize:        'var(--text-sm)',
+                fontSize:        'var(--text-xs)',
+                fontWeight:      '500',
                 letterSpacing:   'var(--tracking-wide)',
                 cursor:          isSubmitting ? 'not-allowed' : 'pointer',
                 transition:      'var(--transition-base)',
-                width:           '100%',
-                opacity:         isSubmitting ? 0.7 : 1,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'
-                e.currentTarget.style.borderColor      = 'var(--color-border-focus)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.borderColor      = 'var(--color-border-strong)'
               }}
             >
-              Continue with email →
+              Magic Link
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('password'); setEmailError(''); setEmailStatus('') }}
+              disabled={isSubmitting}
+              style={{
+                padding:         'var(--space-2) var(--space-3)',
+                backgroundColor: loginMode === 'password' ? 'var(--color-accent)' : 'transparent',
+                color:           loginMode === 'password' ? 'var(--color-text-inverse)' : 'var(--color-text-primary)',
+                border:          loginMode === 'password' ? 'none' : '1px solid var(--color-border-strong)',
+                borderRadius:    'var(--radius-sm)',
+                fontFamily:      'var(--font-mono)',
+                fontSize:        'var(--text-xs)',
+                fontWeight:      '500',
+                letterSpacing:   'var(--tracking-wide)',
+                cursor:          isSubmitting ? 'not-allowed' : 'pointer',
+                transition:      'var(--transition-base)',
+              }}
+            >
+              Username/Password
+            </button>
+          </div>
+
+          {/* Email Magic Link Form */}
+          {loginMode === 'email' && (
+            <form onSubmit={handleEmailSubmit} style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                style={{
+                  padding:         'var(--space-3) var(--space-4)',
+                  backgroundColor: 'var(--color-bg-inset)',
+                  border:          '1px solid var(--color-border-strong)',
+                  borderRadius:    'var(--radius-md)',
+                  fontFamily:      'var(--font-mono)',
+                  fontSize:        'var(--text-sm)',
+                  color:           'var(--color-text-primary)',
+                  outline:         'none',
+                  transition:      'var(--transition-base)',
+                  width:           '100%',
+                  boxSizing:       'border-box',
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-focus)'
+                  e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                  e.currentTarget.style.boxShadow   = 'none'
+                }}
+                autoComplete="email"
+                disabled={isSubmitting}
+              />
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  padding:         'var(--space-3) var(--space-6)',
+                  backgroundColor: 'transparent',
+                  color:           'var(--color-text-primary)',
+                  border:          '1px solid var(--color-border-strong)',
+                  borderRadius:    'var(--radius-md)',
+                  fontFamily:      'var(--font-mono)',
+                  fontSize:        'var(--text-sm)',
+                  letterSpacing:   'var(--tracking-wide)',
+                  cursor:          isSubmitting ? 'not-allowed' : 'pointer',
+                  transition:      'var(--transition-base)',
+                  width:           '100%',
+                  opacity:         isSubmitting ? 0.7 : 1,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'
+                  e.currentTarget.style.borderColor      = 'var(--color-border-focus)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.borderColor      = 'var(--color-border-strong)'
+                }}
+              >
+                Continue with email →
+              </button>
+            </form>
+          )}
+
+          {/* Username/Password Form */}
+          {loginMode === 'password' && (
+            <form onSubmit={handlePasswordSubmit} style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                style={{
+                  padding:         'var(--space-3) var(--space-4)',
+                  backgroundColor: 'var(--color-bg-inset)',
+                  border:          '1px solid var(--color-border-strong)',
+                  borderRadius:    'var(--radius-md)',
+                  fontFamily:      'var(--font-mono)',
+                  fontSize:        'var(--text-sm)',
+                  color:           'var(--color-text-primary)',
+                  outline:         'none',
+                  transition:      'var(--transition-base)',
+                  width:           '100%',
+                  boxSizing:       'border-box',
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-focus)'
+                  e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                  e.currentTarget.style.boxShadow   = 'none'
+                }}
+                autoComplete="email"
+                disabled={isSubmitting}
+              />
+
+              <input
+                type="password"
+                placeholder="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                style={{
+                  padding:         'var(--space-3) var(--space-4)',
+                  backgroundColor: 'var(--color-bg-inset)',
+                  border:          '1px solid var(--color-border-strong)',
+                  borderRadius:    'var(--radius-md)',
+                  fontFamily:      'var(--font-mono)',
+                  fontSize:        'var(--text-sm)',
+                  color:           'var(--color-text-primary)',
+                  outline:         'none',
+                  transition:      'var(--transition-base)',
+                  width:           '100%',
+                  boxSizing:       'border-box',
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-focus)'
+                  e.currentTarget.style.boxShadow   = 'var(--shadow-focus)'
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                  e.currentTarget.style.boxShadow   = 'none'
+                }}
+                autoComplete="current-password"
+                disabled={isSubmitting}
+              />
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  padding:         'var(--space-3) var(--space-6)',
+                  backgroundColor: 'var(--color-accent)',
+                  color:           'var(--color-text-inverse)',
+                  border:          'none',
+                  borderRadius:    'var(--radius-md)',
+                  fontFamily:      'var(--font-mono)',
+                  fontSize:        'var(--text-sm)',
+                  fontWeight:      '500',
+                  letterSpacing:   'var(--tracking-wide)',
+                  cursor:          isSubmitting ? 'not-allowed' : 'pointer',
+                  transition:      'var(--transition-base)',
+                  width:           '100%',
+                  opacity:         isSubmitting ? 0.7 : 1,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-accent)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                Sign in →
+              </button>
+
+              <p style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize:   'var(--text-xs)',
+                color:      'var(--color-text-tertiary)',
+                margin:     0,
+                textAlign:  'center',
+              }}>
+                Demo: demo@example.com / password123
+              </p>
+            </form>
+          )}
 
           {authFeedback && (
             <div style={{
@@ -669,33 +856,6 @@ function HeroSection({ onSignIn, onEmailSignIn, authCallbackError, onClearAuthCa
               {authFeedback}
             </div>
           )}
-
-          <p style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize:   'var(--text-xs)',
-            color:      'var(--color-text-tertiary)',
-            margin:     0,
-            textAlign:  'center',
-          }}>
-            Already have an account?{' '}
-            <button
-              type="button"
-              onClick={handleEmailSubmit}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                fontFamily: 'inherit',
-                fontSize: 'inherit',
-                color: 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-              }}
-            >
-              Sign in
-            </button>
-          </p>
         </div>
 
       </div>
@@ -1208,13 +1368,14 @@ function Footer() {
 // =============================================================================
 
 export default function Landing() {
-  const { signIn, signInWithEmail, authCallbackError, clearAuthCallbackError } = useAuth()
+  const { signIn, signInWithEmail, signInWithPassword, authCallbackError, clearAuthCallbackError } = useAuth()
 
   return (
     <div style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <HeroSection
         onSignIn={signIn}
         onEmailSignIn={signInWithEmail}
+        onPasswordSignIn={signInWithPassword}
         authCallbackError={authCallbackError}
         onClearAuthCallbackError={clearAuthCallbackError}
       />
