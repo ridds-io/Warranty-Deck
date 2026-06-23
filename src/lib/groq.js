@@ -1,12 +1,13 @@
 // =============================================================================
-// WARRANTYDECK — GROQ API WRAPPER
+// WARRANTYDECK — GROQ & GEMINI API WRAPPER
 // src/lib/groq.js
 // =============================================================================
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Vision model: Qwen 3 32B — high-performance reasoning model with vision capabilities
-const VISION_MODEL = 'qwen/qwen3-32b'
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
+
 // Text/chat model: Llama 3.3 70B — best general-purpose model on Groq
 const CHAT_MODEL   = 'llama-3.3-70b-versatile'
 
@@ -54,7 +55,7 @@ function extractJSON(text) {
 }
 
 /**
- * Analyzes a receipt image (base64) using Llama 4 Scout (vision-capable).
+ * Analyzes a receipt image (base64) using Gemini 2.5 Flash for OCR and extraction.
  * Extracts all details and synthesizes store return policy & warranty info.
  *
  * @param {string} base64Data - Base64 encoded image string (raw, no data: prefix)
@@ -62,11 +63,14 @@ function extractJSON(text) {
  * @returns {Promise<object>} Structured receipt data
  */
 export async function analyzeReceiptImage(base64Data, mimeType = 'image/jpeg') {
-  // Build the data URL that the vision model expects
-  let imageUrl = base64Data
-  if (!base64Data.startsWith('data:')) {
-    imageUrl = `data:${mimeType};base64,${base64Data}`
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API Key is not configured. Please get a free API key from Google AI Studio and add it as VITE_GEMINI_API_KEY in your .env file.')
   }
+
+  // Strip prefix if somehow it got here
+  const rawBase64 = base64Data.startsWith('data:')
+    ? base64Data.split(',')[1]
+    : base64Data
 
   const systemPrompt = `You are a receipt extraction and customer rights AI. Analyze the uploaded receipt image.
 Extract all details accurately. Additionally, research and retrieve the return policy and warranty coverage for the store and the items listed from your knowledge base.
@@ -97,29 +101,20 @@ JSON format required:
 }
 Note: Only include the "warranty" object if at least one item on the receipt is a durable product typically covered by a manufacturer warranty (e.g., electronics, appliances, quality outdoor gear, tools). Otherwise, set "warranty" to null.`
 
-  const body = {
-    model: VISION_MODEL,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: systemPrompt
-          },
-          {
-            type: 'image_url',
-            image_url: { url: imageUrl }
-          }
-        ]
-      }
-    ],
-    temperature: 0.1,
-    response_format: { type: 'json_object' }
-  }
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
-  const result = await callGroqAPI(body)
-  const content = result?.choices?.[0]?.message?.content
+  const result = await model.generateContent([
+    systemPrompt,
+    {
+      inlineData: {
+        data: rawBase64,
+        mimeType: mimeType
+      }
+    }
+  ])
+
+  const content = result.response.text()
   return extractJSON(content)
 }
 
