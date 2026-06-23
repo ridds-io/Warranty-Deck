@@ -5,6 +5,11 @@
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
 
+// Vision model: Llama 4 Scout — native multimodal, replaces decommissioned llama-3.2-11b-vision-preview
+const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e'
+// Text/chat model: Llama 3.3 70B — best general-purpose model on Groq
+const CHAT_MODEL   = 'llama-3.3-70b-versatile'
+
 /**
  * Helper to call Groq chat completions API
  */
@@ -31,15 +36,33 @@ async function callGroqAPI(body) {
 }
 
 /**
- * Analyzes a receipt image (base64) using llama-3.2-11b-vision-preview.
- * Extracts details and synthesizes store return policy & warranty details.
- * 
- * @param {string} base64Data - Base64 encoded image string (including mime header if possible, or raw)
- * @param {string} mimeType - e.g., 'image/jpeg', 'image/png'
- * @returns {Promise<object>} The extracted structured receipt data
+ * Extract JSON from model output — handles both raw JSON and markdown-wrapped ```json blocks.
+ */
+function extractJSON(text) {
+  if (!text) throw new Error('Empty response from model.')
+  // Strip markdown code fences if present
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const raw = fenceMatch ? fenceMatch[1].trim() : text.trim()
+  try {
+    return JSON.parse(raw)
+  } catch {
+    // Try finding the first { ... } block
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    if (jsonMatch) return JSON.parse(jsonMatch[0])
+    throw new Error('Could not parse JSON from model response.')
+  }
+}
+
+/**
+ * Analyzes a receipt image (base64) using Llama 4 Scout (vision-capable).
+ * Extracts all details and synthesizes store return policy & warranty info.
+ *
+ * @param {string} base64Data - Base64 encoded image string (raw, no data: prefix)
+ * @param {string} mimeType   - e.g. 'image/jpeg', 'image/png'
+ * @returns {Promise<object>} Structured receipt data
  */
 export async function analyzeReceiptImage(base64Data, mimeType = 'image/jpeg') {
-  // Ensure we have a clean data URL format: data:<mimeType>;base64,<base64Data>
+  // Build the data URL that the vision model expects
   let imageUrl = base64Data
   if (!base64Data.startsWith('data:')) {
     imageUrl = `data:${mimeType};base64,${base64Data}`
@@ -75,7 +98,7 @@ JSON format required:
 Note: Only include the "warranty" object if at least one item on the receipt is a durable product typically covered by a manufacturer warranty (e.g., electronics, appliances, quality outdoor gear, tools). Otherwise, set "warranty" to null.`
 
   const body = {
-    model: 'llama-3.2-11b-vision-preview',
+    model: VISION_MODEL,
     messages: [
       {
         role: 'user',
@@ -86,9 +109,7 @@ Note: Only include the "warranty" object if at least one item on the receipt is 
           },
           {
             type: 'image_url',
-            image_url: {
-              url: imageUrl
-            }
+            image_url: { url: imageUrl }
           }
         ]
       }
@@ -99,11 +120,7 @@ Note: Only include the "warranty" object if at least one item on the receipt is 
 
   const result = await callGroqAPI(body)
   const content = result?.choices?.[0]?.message?.content
-  if (!content) {
-    throw new Error('Received empty response from Groq Vision API.')
-  }
-
-  return JSON.parse(content)
+  return extractJSON(content)
 }
 
 /**
@@ -149,7 +166,7 @@ Rules:
   ]
 
   const body = {
-    model: 'llama-3.3-70b-versatile',
+    model: CHAT_MODEL,
     messages: apiMessages,
     temperature: 0.5
   }
