@@ -1,15 +1,13 @@
 // =============================================================================
-// WARRANTYDECK — GROQ & GEMINI API WRAPPER
+// WARRANTYDECK — GROQ API WRAPPER
 // src/lib/groq.js
 // =============================================================================
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
+const OCR_SPACE_API_KEY = import.meta.env.VITE_OCR_SPACE_API_KEY || 'K83151128888957'
 
 // Text/chat model: Llama 3.3 70B — best general-purpose model on Groq
-const CHAT_MODEL   = 'llama-3.3-70b-versatile'
+const CHAT_MODEL = 'llama-3.3-70b-versatile'
 
 /**
  * Helper to call Groq chat completions API
@@ -55,67 +53,143 @@ function extractJSON(text) {
 }
 
 /**
- * Analyzes a receipt image (base64) using Gemini 2.5 Flash for OCR and extraction.
+ * Extracts text from image using OCR.space API
+ * @param {string} base64Data - Base64 encoded image
+ * @param {number} ocrEngine - OCR Engine (2 or 3)
+ * @param {string} language - Language code (default: 'eng')
+ * @returns {Promise<string>} Extracted text
+ */
+async function extractTextWithOCRSpace(base64Data, ocrEngine = 3, language = 'eng') {
+  const formData = new FormData()
+
+  // Convert base64 to blob
+  const base64WithPrefix = base64Data.startsWith('data:') ? base64Data : `data:image/jpeg;base64,${base64Data}`
+
+  formData.append('base64Image', base64WithPrefix)
+  formData.append('apikey', OCR_SPACE_API_KEY)
+  formData.append('OCREngine', ocrEngine.toString())
+  formData.append('language', language)
+  formData.append('isOverlayRequired', 'false')
+  formData.append('detectOrientation', 'true')
+  formData.append('scale', 'true')
+
+  const response = await fetch('https://api.ocr.space/parse/image', {
+    method: 'POST',
+    body: formData,
+  })
+
+  const result = await response.json()
+
+  if (result.OCRExitCode !== 1) {
+    throw new Error(`OCR failed: ${result.ErrorMessage || 'Unknown error'}`)
+  }
+
+  if (!result.ParsedResults || result.ParsedResults.length === 0) {
+    throw new Error('No text found in image')
+  }
+
+  return result.ParsedResults[0].ParsedText
+}
+
+/**
+ * Analyzes a receipt image using OCR.space for text extraction and Gemini for smart parsing.
+ * With automatic fallback from Engine 3 to Engine 2.
  * Extracts all details and synthesizes store return policy & warranty info.
  *
  * @param {string} base64Data - Base64 encoded image string (raw, no data: prefix)
  * @param {string} mimeType   - e.g. 'image/jpeg', 'image/png'
+ * @param {string} language   - Language code for OCR (default: 'eng')
  * @returns {Promise<object>} Structured receipt data
  */
-export async function analyzeReceiptImage(base64Data, mimeType = 'image/jpeg') {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API Key is not configured. Please get a free API key from Google AI Studio and add it as VITE_GEMINI_API_KEY in your .env file.')
+export async function analyzeReceiptImage(base64Data, mimeType = 'image/jpeg', language = 'eng') {
+  if (!GROQ_API_KEY) {
+    throw new Error('Groq API Key is not configured. Please set VITE_GROQ_API_KEY in your .env file.')
   }
 
-  // Strip prefix if somehow it got here
-  const rawBase64 = base64Data.startsWith('data:')
-    ? base64Data.split(',')[1]
-    : base64Data
+  // Step 1: Extract text using OCR.space
+  let extractedText = null
+  let ocrEngine = 3 // Start with Engine 3 (better quality)
 
-  const systemPrompt = `You are a receipt extraction and customer rights AI. Analyze the uploaded receipt image.
-Extract all details accurately. Additionally, research and retrieve the return policy and warranty coverage for the store and the items listed from your knowledge base.
-You must output a single JSON object. Do not include any markdown backticks, conversational preamble, or explanation.
+  try {
+    console.log('Extracting text with OCR.space Engine 3...')
+    extractedText = await extractTextWithOCRSpace(base64Data, 3, language)
+    console.log('OCR Engine 3 successful')
+  } catch (error) {
+    console.warn('OCR Engine 3 failed, falling back to Engine 2:', error.message)
+    try {
+      extractedText = await extractTextWithOCRSpace(base64Data, 2, language)
+      ocrEngine = 2
+      console.log('OCR Engine 2 successful')
+    } catch (fallbackError) {
+      throw new Error(`OCR extraction failed: ${fallbackError.message}`)
+    }
+  }
 
-JSON format required:
+  if (!extractedText || extractedText.trim().length === 0) {
+    throw new Error('No text could be extracted from the receipt image')
+  }
+
+  console.log('Extracted text length:', extractedText.length, 'characters')
+
+  // Step 2: Use Groq (Llama 3.3 70B) to parse and structure the extracted text
+  const systemPrompt = `You are a receipt extraction and customer rights AI. Parse the OCR-extracted text from a receipt and extract all details accurately.
+
+Additionally, use your knowledge to infer:
+- The store's typical return policy window
+- Standard manufacturer warranty for the items (if applicable)
+- Appropriate categorization
+
+You must output ONLY a valid JSON object. No markdown, no explanations, just the JSON.
+
+Required JSON format:
 {
-  "storeName": "Name of the store (e.g. Costco, Walmart)",
-  "purchaseDate": "YYYY-MM-DD (format strictly like 2026-06-23)",
+  "storeName": "Name of the store",
+  "purchaseDate": "YYYY-MM-DD",
   "totalAmount": 123.45,
   "category": "One of: Electronics, Dining, Travel, Medical, Lifestyle, Groceries, Miscellaneous",
-  "folderType": "One of: vault, memorabilia, reimbursement",
-  "returnDeadline": "YYYY-MM-DD (calculate this using the store's return policy length starting from purchaseDate)",
-  "aiSummary": "A concise summary detailing the return policy window (e.g., 30 or 90 days), any exclusions, and standard manufacturer warranty duration/benefits or claim steps for the items in the list.",
+  "folderType": "vault",
+  "returnDeadline": "YYYY-MM-DD (calculate from purchaseDate + store's return policy)",
+  "aiSummary": "Brief summary of return policy and warranty info",
   "items": [
-    {
-      "name": "Item description",
-      "qty": 1,
-      "price": 99.99
-    }
+    {"name": "Item name", "qty": 1, "price": 99.99}
   ],
   "warranty": {
-    "title": "Warranty name (e.g. TV Warranty, Backpack Coverage)",
-    "provider": "Warranty provider or manufacturer name",
-    "expiresOn": "YYYY-MM-DD (calculate this if a warranty is standard for this type of product, e.g. 1 year or 2 years from purchaseDate)",
+    "title": "Product warranty name",
+    "provider": "Manufacturer or provider",
+    "expiresOn": "YYYY-MM-DD",
     "benefits": ["Benefit 1", "Benefit 2"]
   }
 }
-Note: Only include the "warranty" object if at least one item on the receipt is a durable product typically covered by a manufacturer warranty (e.g., electronics, appliances, quality outdoor gear, tools). Otherwise, set "warranty" to null.`
 
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
+Note: Set "warranty" to null if no durable goods with typical manufacturer warranties (like electronics, appliances, tools) are present.`
 
-  const result = await model.generateContent([
-    systemPrompt,
-    {
-      inlineData: {
-        data: rawBase64,
-        mimeType: mimeType
-      }
+  const userPrompt = `Parse this receipt text and extract the required information:\n\n${extractedText}`
+
+  // Call Groq API
+  const body = {
+    model: CHAT_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.3, // Lower temperature for more consistent parsing
+    response_format: { type: 'json_object' } // Request JSON response
+  }
+
+  try {
+    console.log('Analyzing with Groq Llama 3.3 70B...')
+    const result = await callGroqAPI(body)
+    const content = result?.choices?.[0]?.message?.content
+
+    if (!content) {
+      throw new Error('No response from Groq API')
     }
-  ])
 
-  const content = result.response.text()
-  return extractJSON(content)
+    return extractJSON(content)
+  } catch (error) {
+    console.error('Groq parsing error:', error)
+    throw new Error(`Failed to parse receipt: ${error.message}`)
+  }
 }
 
 /**
