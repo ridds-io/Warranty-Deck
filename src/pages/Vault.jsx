@@ -101,7 +101,7 @@ export default function Vault() {
           folder_type: parsed.folderType || 'vault',
           return_deadline: parsed.returnDeadline,
           ai_summary: parsed.aiSummary,
-          image_path: uploadResult.path,
+          file_url: uploadResult.path,
         })
         .select()
         .single()
@@ -112,9 +112,11 @@ export default function Vault() {
       if (parsed.items && parsed.items.length > 0) {
         const itemsToInsert = parsed.items.map(item => ({
           receipt_id: receiptData.id,
-          item_name: item.name,
+          product_id: 1, // TODO: Link to actual product or make this nullable
+          item_description: item.name,
           quantity: item.qty,
-          price: item.price,
+          unit_price: item.price,
+          total_price: item.price * item.qty,
         }))
         const { error: itemsError } = await supabase.from('receipt_items').insert(itemsToInsert)
         if (itemsError) console.error('Failed to insert receipt items:', itemsError)
@@ -125,10 +127,10 @@ export default function Vault() {
         const { error: warrantyError } = await supabase.from('warranties').insert({
           user_id: user.id,
           receipt_id: receiptData.id,
-          title: parsed.warranty.title,
-          provider: parsed.warranty.provider,
-          purchase_date: parsed.purchaseDate,
-          expires_on: parsed.warranty.expiresOn,
+          product_name: parsed.warranty.title,
+          brand: parsed.warranty.provider,
+          warranty_start_date: parsed.purchaseDate,
+          warranty_end_date: parsed.warranty.expiresOn,
           warranty_benefits: parsed.warranty.benefits,
         })
         if (warrantyError) console.error('Failed to insert warranty:', warrantyError)

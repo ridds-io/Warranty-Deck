@@ -35,13 +35,13 @@ function toBenefits(value) {
 }
 
 function mapWarranty(row) {
-  const expiresOn = formatDate(row.expires_on || row.expiry_date || row.end_date)
+  const expiresOn = formatDate(row.warranty_end_date || row.expires_on || row.expiry_date || row.end_date)
   return {
     id: row.id,
     receiptId: row.receipt_id || row.receiptId || null,
     title: row.title || row.product_name || row.warranty_name || 'Warranty',
     provider: row.provider || row.brand || 'Coverage',
-    purchaseDate: formatDate(row.purchase_date || row.purchaseDate),
+    purchaseDate: formatDate(row.warranty_start_date || row.purchase_date || row.purchaseDate),
     expiresOn,
     status: row.status || computeStatus(expiresOn),
     benefits: toBenefits(row.warranty_benefits || row.benefits),
@@ -67,7 +67,7 @@ export function useWarranties() {
     let query = supabase
       .from('warranties')
       .select('*')
-      .order('expires_on', { ascending: true })
+      .order('warranty_end_date', { ascending: true })
 
     if (user?.id) {
       query = query.eq('user_id', user.id)

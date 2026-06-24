@@ -34,12 +34,12 @@ function mapReceipt(row) {
     hasWarranty: Boolean(row.has_warranty || row.warranty_id),
     warrantyId: row.warranty_id || null,
     aiSummary: row.ai_summary || '',
-    imagePath: row.image_path || null,
+    imagePath: row.file_url || null,
     items: Array.isArray(row.receipt_items)
       ? row.receipt_items.map(item => ({
-        name: item.item_name || item.name || 'Item',
+        name: item.item_description || item.item_name || item.name || 'Item',
         qty: Number(item.quantity || item.qty || 1),
-        price: Number(item.price || item.amount || 0),
+        price: Number(item.unit_price || item.price || item.amount || 0),
       }))
       : [],
   }
@@ -76,7 +76,7 @@ export function useReceipts() {
         has_warranty,
         warranty_id,
         ai_summary,
-        image_path,
+        file_url,
         receipt_items(*)
       `)
       .order('purchase_date', { ascending: false })
@@ -135,7 +135,7 @@ export function useReceipt(receiptId) {
         has_warranty,
         warranty_id,
         ai_summary,
-        image_path,
+        file_url,
         receipt_items(*)
       `)
       .eq('id', receiptId)
