@@ -26,7 +26,7 @@ export default function ReceiptScanner({ onScan }) {
             fontSize: 'var(--text-lg)',
           }}
         >
-          Scan with OCR
+          Save Receipt
         </div>
         <div
           style={{
@@ -35,10 +35,10 @@ export default function ReceiptScanner({ onScan }) {
             color: 'var(--color-text-tertiary)',
           }}
         >
-          Extract totals, dates, and items automatically.
+          Upload and scan with AI to extract details automatically.
         </div>
       </div>
-      <Button size="sm" onClick={onScan}>Start scan</Button>
+      <Button size="sm" onClick={onScan}>Upload & Save</Button>
     </div>
   )
 }

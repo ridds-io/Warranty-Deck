@@ -104,7 +104,7 @@ export default function Analytics() {
               Expiring warranties
             </h2>
             <button
-              onClick={() => navigate('/vault')}
+              onClick={() => navigate('/vault?view=warranties')}
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 'var(--text-xs)',
@@ -147,7 +147,7 @@ export default function Analytics() {
               Recent receipts
             </h2>
             <button
-              onClick={() => navigate('/vault')}
+              onClick={() => navigate('/vault?view=receipts')}
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 'var(--text-xs)',

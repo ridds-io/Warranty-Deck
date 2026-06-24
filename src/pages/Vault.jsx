@@ -3,7 +3,7 @@
 // src/pages/Vault.jsx
 // =============================================================================
 
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import ReceiptCard from '../components/receipt/ReceiptCard'
@@ -24,9 +24,10 @@ export default function Vault() {
   const navigate = useNavigate()
   const params = new URLSearchParams(location.search)
   const searchQuery = params.get('search') || ''
+  const viewParam = params.get('view') || 'receipts' // Get view from URL
   const [query, setQuery] = useState(searchQuery)
   const [category, setCategory] = useState('All')
-  const [viewMode, setViewMode] = useState('receipts') // 'receipts' or 'warranties'
+  const [viewMode, setViewMode] = useState(viewParam) // Initialize from URL param
   const { receipts, loading, refresh } = useReceipts()
   const { warranties, loading: loadingWarranties } = useWarranties()
   const { user } = useAuth()
@@ -43,6 +44,14 @@ export default function Vault() {
     const unique = new Set(receipts.map(item => item.category))
     return ['All', ...Array.from(unique)]
   }, [receipts])
+
+  // Sync viewMode with URL parameter
+  useEffect(() => {
+    const currentView = params.get('view')
+    if (currentView && currentView !== viewMode) {
+      setViewMode(currentView)
+    }
+  }, [location.search])
 
   const filtered = receipts.filter(receipt => {
     if (receipt.folderType !== 'vault') return false
