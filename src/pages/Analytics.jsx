@@ -3,16 +3,19 @@
 // src/pages/Analytics.jsx
 // =============================================================================
 
+import { useNavigate } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import SpendingChart from '../components/charts/SpendingChart'
 import CategoryPie from '../components/charts/CategoryPie'
 import WarrantyCard from '../components/warranty/WarrantyCard'
+import ReceiptCard from '../components/receipt/ReceiptCard'
 import EmptyState from '../components/ui/EmptyState'
 import { useReceipts } from '../hooks/useReceipts'
 import { useWarranties } from '../hooks/useWarranties'
 import { groupSpendByWeekday, groupSpendByCategory } from '../lib/analytics'
 
 export default function Analytics() {
+  const navigate = useNavigate()
   const { receipts, loading: receiptsLoading } = useReceipts()
   const { warranties, loading: warrantiesLoading } = useWarranties()
 
@@ -22,6 +25,18 @@ export default function Analytics() {
   const avgReceipt = receipts.length
     ? totalSpend / receipts.length
     : 0
+
+  // Get recent receipts (last 5)
+  const recentReceipts = receipts.slice(0, 5)
+
+  // Get expiring warranties (next 60 days)
+  const expiringWarranties = warranties.filter(w => {
+    if (w.status === 'expired') return false
+    const today = new Date()
+    const expiry = new Date(w.expiresOn)
+    const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24))
+    return diffDays <= 60 && diffDays > 0
+  }).slice(0, 5)
 
   return (
     <PageWrapper title="Analytics">
@@ -84,17 +99,86 @@ export default function Analytics() {
         </section>
 
         <section style={{ display: 'grid', gap: 'var(--space-4)' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)' }}>
-            Expiring warranties
-          </h2>
-          <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-            {warrantiesLoading || receiptsLoading ? (
-              <EmptyState message="Loading analytics..." />
-            ) : warranties.length === 0 ? (
-              <EmptyState message="No warranties available." />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)' }}>
+              Expiring warranties
+            </h2>
+            <button
+              onClick={() => navigate('/vault')}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-secondary)',
+                textDecoration: 'underline',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              View all in Vault →
+            </button>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 'var(--space-4)'
+            }}
+          >
+            {warrantiesLoading ? (
+              <EmptyState message="Loading warranties..." />
+            ) : expiringWarranties.length === 0 ? (
+              <EmptyState message="No warranties expiring soon." />
             ) : (
-              warranties.map(item => (
-                <WarrantyCard key={item.id} warranty={item} onOpen={() => {}} />
+              expiringWarranties.map(item => (
+                <WarrantyCard
+                  key={item.id}
+                  warranty={item}
+                  onClick={() => navigate(`/warranty/${item.id}`)}
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        <section style={{ display: 'grid', gap: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)' }}>
+              Recent receipts
+            </h2>
+            <button
+              onClick={() => navigate('/vault')}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-secondary)',
+                textDecoration: 'underline',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              View all in Vault →
+            </button>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: 'var(--space-4)'
+            }}
+          >
+            {receiptsLoading ? (
+              <EmptyState message="Loading receipts..." />
+            ) : recentReceipts.length === 0 ? (
+              <EmptyState message="No receipts available." />
+            ) : (
+              recentReceipts.map(item => (
+                <ReceiptCard
+                  key={item.id}
+                  receipt={item}
+                  onOpen={(id) => navigate(`/receipt/${id}`)}
+                />
               ))
             )}
           </div>

@@ -9,9 +9,12 @@ import PageWrapper from '../components/layout/PageWrapper'
 import ReceiptCard from '../components/receipt/ReceiptCard'
 import ReceiptUploader from '../components/receipt/ReceiptUploader'
 import ReceiptScanner from '../components/receipt/ReceiptScanner'
+import ReceiptReviewModal from '../components/receipt/ReceiptReviewModal'
+import WarrantyCard from '../components/warranty/WarrantyCard'
 import Input from '../components/ui/Input'
 import EmptyState from '../components/ui/EmptyState'
 import { useReceipts } from '../hooks/useReceipts'
+import { useWarranties } from '../hooks/useWarranties'
 import { useAuth } from '../context/AuthContext'
 import { uploadReceiptFile, supabase } from '../lib/supabase'
 import { analyzeReceiptImage } from '../lib/groq'
@@ -23,13 +26,18 @@ export default function Vault() {
   const searchQuery = params.get('search') || ''
   const [query, setQuery] = useState(searchQuery)
   const [category, setCategory] = useState('All')
+  const [viewMode, setViewMode] = useState('receipts') // 'receipts' or 'warranties'
   const { receipts, loading, refresh } = useReceipts()
+  const { warranties, loading: loadingWarranties } = useWarranties()
   const { user } = useAuth()
   const fileInputRef = useRef(null)
 
   const [isProcessing, setIsProcessing] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [extractedData, setExtractedData] = useState(null)
+  const [uploadedFilePath, setUploadedFilePath] = useState(null)
 
   const categories = useMemo(() => {
     const unique = new Set(receipts.map(item => item.category))
@@ -87,30 +95,57 @@ export default function Vault() {
       // 3. Send to Groq Vision model
       const parsed = await analyzeReceiptImage(base64Data, file.type)
 
-      // 4. Save to Database
-      setStatusMessage('Saving extracted items and return policies to database...')
+      // 4. Store extracted data and show review modal
+      setExtractedData(parsed)
+      setUploadedFilePath(uploadResult.path)
+      setShowReviewModal(true)
+      setIsProcessing(false)
+      setStatusMessage('')
+    } catch (err) {
+      console.error('Error processing receipt:', err)
+      setErrorMessage(err.message || 'An error occurred during receipt processing.')
+      setIsProcessing(false)
+    }
+  }
+
+  const handleSaveReceipt = async (formData) => {
+    if (!user || !extractedData) return
+
+    setShowReviewModal(false)
+    setIsProcessing(true)
+    setStatusMessage('Saving receipt to database...')
+
+    try {
+      // Save receipt to database
+      const receiptInsertData = {
+        user_id: user.id,
+        store_name: formData.storeName,
+        purchase_date: formData.purchaseDate,
+        total_amount: parseFloat(formData.totalAmount),
+        category_name: formData.category,
+        folder_type: formData.folderType,
+        notes: formData.memorabiliaNote || null,
+        return_deadline: extractedData.returnDeadline,
+        ai_summary: extractedData.aiSummary,
+        file_url: uploadedFilePath,
+      }
+
+      // Add reimbursement_folder_id if reimbursement type and folder selected
+      if (formData.folderType === 'reimbursement' && formData.reimbursementFolderId) {
+        receiptInsertData.reimbursement_folder_id = formData.reimbursementFolderId
+      }
 
       const { data: receiptData, error: receiptError } = await supabase
         .from('receipts')
-        .insert({
-          user_id: user.id,
-          store_name: parsed.storeName,
-          purchase_date: parsed.purchaseDate,
-          total_amount: parsed.totalAmount,
-          category_name: parsed.category,
-          folder_type: parsed.folderType || 'vault',
-          return_deadline: parsed.returnDeadline,
-          ai_summary: parsed.aiSummary,
-          file_url: uploadResult.path,
-        })
+        .insert(receiptInsertData)
         .select()
         .single()
 
       if (receiptError) throw receiptError
 
       // Insert line items
-      if (parsed.items && parsed.items.length > 0) {
-        const itemsToInsert = parsed.items.map(item => ({
+      if (extractedData.items && extractedData.items.length > 0) {
+        const itemsToInsert = extractedData.items.map(item => ({
           receipt_id: receiptData.id,
           product_id: 1, // TODO: Link to actual product or make this nullable
           item_description: item.name,
@@ -123,30 +158,77 @@ export default function Vault() {
       }
 
       // Insert warranty if detected
-      if (parsed.warranty) {
-        const { error: warrantyError } = await supabase.from('warranties').insert({
+      if (extractedData.warranty) {
+        const { data: warrantyData, error: warrantyError } = await supabase.from('warranties').insert({
           user_id: user.id,
           receipt_id: receiptData.id,
-          product_name: parsed.warranty.title,
-          brand: parsed.warranty.provider,
-          warranty_start_date: parsed.purchaseDate,
-          warranty_end_date: parsed.warranty.expiresOn,
-          warranty_benefits: parsed.warranty.benefits,
+          product_name: extractedData.warranty.title,
+          brand: extractedData.warranty.provider,
+          warranty_start_date: formData.purchaseDate,
+          warranty_end_date: extractedData.warranty.expiresOn,
+          warranty_benefits: extractedData.warranty.benefits,
         })
+          .select()
+          .single()
+
         if (warrantyError) console.error('Failed to insert warranty:', warrantyError)
+
+        // Create notification preference if warranty notification is enabled
+        if (formData.notifyWarrantyExpiry && !warrantyError && warrantyData) {
+          await createNotificationPreference(
+            receiptData.id,
+            'warranty_expiry',
+            formData.notificationDays,
+            extractedData.warranty.expiresOn
+          )
+        }
       }
 
-      setStatusMessage('Receipt successfully analyzed and saved!')
+      // Create notification preference for return deadline if enabled
+      if (formData.notifyReturnDeadline && extractedData.returnDeadline) {
+        await createNotificationPreference(
+          receiptData.id,
+          'return_reminder',
+          formData.notificationDays,
+          extractedData.returnDeadline
+        )
+      }
+
+      setStatusMessage('Receipt successfully saved!')
       setTimeout(() => {
         setIsProcessing(false)
         setStatusMessage('')
+        setExtractedData(null)
+        setUploadedFilePath(null)
       }, 1500)
 
       refresh()
     } catch (err) {
-      console.error('Error processing receipt:', err)
-      setErrorMessage(err.message || 'An error occurred during receipt processing.')
+      console.error('Error saving receipt:', err)
+      setErrorMessage(err.message || 'An error occurred while saving the receipt.')
       setIsProcessing(false)
+    }
+  }
+
+  const createNotificationPreference = async (receiptId, notificationType, daysBeforeExpiry, expiryDate) => {
+    try {
+      // Calculate scheduled date
+      const expiry = new Date(expiryDate)
+      const scheduledDate = new Date(expiry)
+      scheduledDate.setDate(scheduledDate.getDate() - daysBeforeExpiry)
+
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        receipt_id: receiptId,
+        notification_type: notificationType,
+        delivery_method: 'email',
+        title: notificationType === 'warranty_expiry' ? 'Warranty Expiring Soon' : 'Return Deadline Approaching',
+        message: `Your ${notificationType === 'warranty_expiry' ? 'warranty' : 'return period'} expires in ${daysBeforeExpiry} days`,
+        scheduled_date: scheduledDate.toISOString().split('T')[0],
+        status: 'pending',
+      })
+    } catch (err) {
+      console.error('Failed to create notification:', err)
     }
   }
 
@@ -199,63 +281,169 @@ export default function Vault() {
         <ReceiptUploader onUpload={handleUpload} disabled={isProcessing} />
         <ReceiptScanner onScan={triggerScan} />
 
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-            {categories.map(item => (
-              <button
-                key={item}
-                onClick={() => setCategory(item)}
-                style={{
-                  padding: 'var(--space-2) var(--space-4)',
-                  borderRadius: 'var(--radius-full)',
-                  border: '1px solid',
-                  borderColor: category === item
-                    ? 'var(--color-border-strong)'
-                    : 'var(--color-border-soft)',
-                  backgroundColor: category === item
-                    ? 'var(--color-bg-elevated)'
-                    : 'transparent',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-xs)',
-                  letterSpacing: 'var(--tracking-wide)',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+        {/* View Mode Toggle */}
+        <div style={{
+          display: 'flex',
+          gap: 'var(--space-3)',
+          padding: 'var(--space-2)',
+          backgroundColor: 'var(--color-bg-elevated)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-soft)',
+          width: 'fit-content'
+        }}>
+          <button
+            onClick={() => setViewMode('receipts')}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              backgroundColor: viewMode === 'receipts'
+                ? 'var(--color-bg-surface)'
+                : 'transparent',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: viewMode === 'receipts' ? '500' : 'normal',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: viewMode === 'receipts' ? 'var(--shadow-sm)' : 'none',
+            }}
+          >
+            📄 Receipts
+          </button>
+          <button
+            onClick={() => setViewMode('warranties')}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              backgroundColor: viewMode === 'warranties'
+                ? 'var(--color-bg-surface)'
+                : 'transparent',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: viewMode === 'warranties' ? '500' : 'normal',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: viewMode === 'warranties' ? 'var(--shadow-sm)' : 'none',
+            }}
+          >
+            🛡️ Warranties
+          </button>
+        </div>
 
-          <Input
-            value={query}
-            onChange={e => handleSearch(e.target.value)}
-            placeholder="Search vault receipts"
-          />
-        </section>
+        {viewMode === 'receipts' ? (
+          <>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                {categories.map(item => (
+                  <button
+                    key={item}
+                    onClick={() => setCategory(item)}
+                    style={{
+                      padding: 'var(--space-2) var(--space-4)',
+                      borderRadius: 'var(--radius-full)',
+                      border: '1px solid',
+                      borderColor: category === item
+                        ? 'var(--color-border-strong)'
+                        : 'var(--color-border-soft)',
+                      backgroundColor: category === item
+                        ? 'var(--color-bg-elevated)'
+                        : 'transparent',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-xs)',
+                      letterSpacing: 'var(--tracking-wide)',
+                      textTransform: 'uppercase',
+                      color: 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
 
-        <section
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 'var(--space-4)',
-          }}
-        >
-          {loading ? (
-            <EmptyState message="Loading receipts..." />
-          ) : filtered.length === 0 ? (
-            <EmptyState message="No receipts found." />
-          ) : (
-            filtered.map(receipt => (
-              <ReceiptCard
-                key={receipt.id}
-                receipt={receipt}
-                onOpen={(id) => navigate(`/receipt/${id}`)}
+              <Input
+                value={query}
+                onChange={e => handleSearch(e.target.value)}
+                placeholder="Search vault receipts"
               />
-            ))
-          )}
-        </section>
+            </section>
+
+            <section
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
+              {loading ? (
+                <EmptyState message="Loading receipts..." />
+              ) : filtered.length === 0 ? (
+                <EmptyState message="No receipts found." />
+              ) : (
+                filtered.map(receipt => (
+                  <ReceiptCard
+                    key={receipt.id}
+                    receipt={receipt}
+                    onOpen={(id) => navigate(`/receipt/${id}`)}
+                  />
+                ))
+              )}
+            </section>
+          </>
+        ) : (
+          <>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <Input
+                value={query}
+                onChange={e => handleSearch(e.target.value)}
+                placeholder="Search warranties"
+              />
+            </section>
+
+            <section
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
+              {loadingWarranties ? (
+                <EmptyState message="Loading warranties..." />
+              ) : warranties.length === 0 ? (
+                <EmptyState message="No warranties found." />
+              ) : (
+                warranties
+                  .filter(warranty =>
+                    !query ||
+                    warranty.title.toLowerCase().includes(query.toLowerCase()) ||
+                    warranty.provider.toLowerCase().includes(query.toLowerCase())
+                  )
+                  .map(warranty => (
+                    <WarrantyCard
+                      key={warranty.id}
+                      warranty={warranty}
+                      onClick={() => navigate(`/warranty/${warranty.id}`)}
+                    />
+                  ))
+              )}
+            </section>
+          </>
+        )}
+
+        {/* Review Modal */}
+        <ReceiptReviewModal
+          open={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false)
+            setExtractedData(null)
+            setUploadedFilePath(null)
+          }}
+          extractedData={extractedData}
+          onSave={handleSaveReceipt}
+        />
       </div>
     </PageWrapper>
   )

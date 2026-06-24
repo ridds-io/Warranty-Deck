@@ -25,33 +25,36 @@
 //   *                  → 404 redirect  (catches anything else)
 // =============================================================================
 
-import { useEffect }                          from 'react'
-import { BrowserRouter, Routes, Route,
-         Navigate, useLocation }              from 'react-router-dom'
+import { useEffect } from 'react'
+import {
+  BrowserRouter, Routes, Route,
+  Navigate, useLocation
+} from 'react-router-dom'
 
-import { AuthProvider, useAuth }              from './context/AuthContext'
-import { ThemeProvider, useTheme }            from './context/ThemeContext'
-import { CurrencyProvider }                   from './context/CurrencyContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider, useTheme } from './context/ThemeContext'
+import { CurrencyProvider } from './context/CurrencyContext'
 
 // Pages — loaded normally for now.
 // Later we can switch to React.lazy() for code splitting if the bundle
 // gets large, but for now keep it simple.
-import Landing             from './pages/Landing'
-import AuthCallback        from './pages/AuthCallback'
-import DashboardPreview    from './pages/DashboardPreview'
-import AuthSessionHandler  from './components/AuthSessionHandler'
+import Landing from './pages/Landing'
+import AuthCallback from './pages/AuthCallback'
+import DashboardPreview from './pages/DashboardPreview'
+import AuthSessionHandler from './components/AuthSessionHandler'
 
 import { lazy, Suspense } from 'react'
 
-const Dashboard    = lazy(() => import('./pages/Dashboard'))
-const Vault        = lazy(() => import('./pages/Vault'))
-const Memorabilia  = lazy(() => import('./pages/Memorabilia'))
-const Reimbursement= lazy(() => import('./pages/Reimbursement'))
-const ReceiptDetail= lazy(() => import('./pages/ReceiptDetail'))
-const WarrantyDetail=lazy(() => import('./pages/WarrantyDetail'))
-const Analytics    = lazy(() => import('./pages/Analytics'))
-const Chatbot      = lazy(() => import('./pages/Chatbot'))
-const Settings     = lazy(() => import('./pages/Settings'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Vault = lazy(() => import('./pages/Vault'))
+const Memorabilia = lazy(() => import('./pages/Memorabilia'))
+const Reimbursement = lazy(() => import('./pages/Reimbursement'))
+const ReimbursementDetail = lazy(() => import('./pages/ReimbursementDetail'))
+const ReceiptDetail = lazy(() => import('./pages/ReceiptDetail'))
+const WarrantyDetail = lazy(() => import('./pages/WarrantyDetail'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const Chatbot = lazy(() => import('./pages/Chatbot'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 // Global styles — order matters here.
 // tokens.css first (defines variables),
@@ -137,38 +140,38 @@ function ScrollToTop() {
 function SignInRequired() {
   return (
     <div style={{
-      minHeight:       '100vh',
+      minHeight: '100vh',
       backgroundColor: 'var(--color-bg-base)',
-      display:         'flex',
-      flexDirection:   'column',
-      alignItems:      'center',
-      justifyContent:  'center',
-      gap:             'var(--space-6)',
-      padding:         'var(--space-8)',
-      textAlign:       'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'var(--space-6)',
+      padding: 'var(--space-8)',
+      textAlign: 'center',
     }}>
       <div style={{
-        fontFamily:    'var(--font-mono)',
-        fontSize:      'var(--text-xs)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 'var(--text-xs)',
         letterSpacing: 'var(--tracking-widest)',
-        color:         'var(--color-text-tertiary)',
+        color: 'var(--color-text-tertiary)',
         textTransform: 'uppercase',
       }}>
         WarrantyDeck
       </div>
       <h1 style={{
         fontFamily: 'var(--font-display)',
-        fontSize:   'var(--text-2xl)',
-        margin:     0,
+        fontSize: 'var(--text-2xl)',
+        margin: 0,
       }}>
         Sign in to open the dashboard
       </h1>
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize:   'var(--text-sm)',
-        color:      'var(--color-text-secondary)',
-        maxWidth:   '360px',
-        margin:     0,
+        fontSize: 'var(--text-sm)',
+        color: 'var(--color-text-secondary)',
+        maxWidth: '360px',
+        margin: 0,
       }}>
         This page is only available after Google or email sign-in. Your session may have expired.
       </p>
@@ -176,13 +179,13 @@ function SignInRequired() {
         <a
           href="/"
           style={{
-            fontFamily:      'var(--font-mono)',
-            fontSize:        'var(--text-sm)',
-            padding:         'var(--space-3) var(--space-6)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-sm)',
+            padding: 'var(--space-3) var(--space-6)',
             backgroundColor: 'var(--color-accent)',
-            color:           'var(--color-text-inverse)',
-            borderRadius:    'var(--radius-md)',
-            textDecoration:  'none',
+            color: 'var(--color-text-inverse)',
+            borderRadius: 'var(--radius-md)',
+            textDecoration: 'none',
           }}
         >
           Go to sign in
@@ -190,12 +193,12 @@ function SignInRequired() {
         <a
           href="/preview/dashboard"
           style={{
-            fontFamily:     'var(--font-mono)',
-            fontSize:       'var(--text-sm)',
-            padding:        'var(--space-3) var(--space-6)',
-            color:          'var(--color-text-primary)',
-            border:         '1px solid var(--color-border-strong)',
-            borderRadius:   'var(--radius-md)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-sm)',
+            padding: 'var(--space-3) var(--space-6)',
+            color: 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: 'var(--radius-md)',
             textDecoration: 'none',
           }}
         >
@@ -251,20 +254,20 @@ function PublicRoute({ children }) {
 function AppLoadingScreen() {
   return (
     <div style={{
-      minHeight:       '100vh',
+      minHeight: '100vh',
       backgroundColor: 'var(--color-bg-base)',
-      display:         'flex',
-      flexDirection:   'column',
-      alignItems:      'center',
-      justifyContent:  'center',
-      gap:             'var(--space-4)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'var(--space-4)',
     }}>
       {/* Brand name in mono — same as the navbar */}
       <span style={{
-        fontFamily:    'var(--font-mono)',
-        fontSize:      'var(--text-xl)',
-        fontWeight:    '500',
-        color:         'var(--color-text-primary)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 'var(--text-xl)',
+        fontWeight: '500',
+        color: 'var(--color-text-primary)',
         letterSpacing: 'var(--tracking-wider)',
       }}>
         WARRANTYDECK
@@ -272,12 +275,12 @@ function AppLoadingScreen() {
 
       {/* Subtle loading indicator — a thin animated line, not a spinner */}
       <div style={{
-        width:          '120px',
-        height:         '1px',
-        background:     `linear-gradient(90deg, var(--color-border-soft) 25%, var(--color-text-primary) 50%, var(--color-border-soft) 75%)`,
+        width: '120px',
+        height: '1px',
+        background: `linear-gradient(90deg, var(--color-border-soft) 25%, var(--color-text-primary) 50%, var(--color-border-soft) 75%)`,
         backgroundSize: '200% 100%',
-        borderRadius:   '1px',
-        animation:      'shimmer 1.2s ease-in-out infinite',
+        borderRadius: '1px',
+        animation: 'shimmer 1.2s ease-in-out infinite',
       }} />
     </div>
   )
@@ -302,115 +305,124 @@ function AppRoutes() {
       <ThemeSynchroniser />
 
       <AuthSessionHandler>
-      <Routes>
+        <Routes>
 
-        {/* ── PUBLIC ──────────────────────────────────────────────────────── */}
+          {/* ── PUBLIC ──────────────────────────────────────────────────────── */}
 
-        <Route
-          path="/"
-          element={
-            <PublicRoute>
-              <Landing />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <Landing />
+              </PublicRoute>
+            }
+          />
 
-        {/* OAuth / magic-link return — must match getAuthRedirectUrl() in supabase.js */}
-        <Route path="/auth/callback" element={<AuthCallback />} />
+          {/* OAuth / magic-link return — must match getAuthRedirectUrl() in supabase.js */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* UI preview — no auth, sample data (for design review / debugging deploy) */}
-        <Route path="/preview/dashboard" element={<DashboardPreview />} />
+          {/* UI preview — no auth, sample data (for design review / debugging deploy) */}
+          <Route path="/preview/dashboard" element={<DashboardPreview />} />
 
-        {/* ── PROTECTED ───────────────────────────────────────────────────── */}
+          {/* ── PROTECTED ───────────────────────────────────────────────────── */}
 
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/vault"
-          element={
-            <ProtectedRoute>
-              <Vault />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/vault"
+            element={
+              <ProtectedRoute>
+                <Vault />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/memorabilia"
-          element={
-            <ProtectedRoute>
-              <Memorabilia />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/memorabilia"
+            element={
+              <ProtectedRoute>
+                <Memorabilia />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/reimbursement"
-          element={
-            <ProtectedRoute>
-              <Reimbursement />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/reimbursement"
+            element={
+              <ProtectedRoute>
+                <Reimbursement />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Dynamic routes — :id is the receipt/warranty UUID from Supabase */}
-        <Route
-          path="/receipt/:id"
-          element={
-            <ProtectedRoute>
-              <ReceiptDetail />
-            </ProtectedRoute>
-          }
-        />
+          {/* Dynamic routes — :id is the receipt/warranty UUID from Supabase */}
+          <Route
+            path="/reimbursement/:folderId"
+            element={
+              <ProtectedRoute>
+                <ReimbursementDetail />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/warranty/:id"
-          element={
-            <ProtectedRoute>
-              <WarrantyDetail />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/receipt/:id"
+            element={
+              <ProtectedRoute>
+                <ReceiptDetail />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoute>
-              <Analytics />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/warranty/:id"
+            element={
+              <ProtectedRoute>
+                <WarrantyDetail />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute>
-              <Chatbot />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chatbot />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* ── CATCH-ALL ───────────────────────────────────────────────────── */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Any unrecognised URL redirects to the landing page */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          {/* ── CATCH-ALL ───────────────────────────────────────────────────── */}
 
-      </Routes>
+          {/* Any unrecognised URL redirects to the landing page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+
+        </Routes>
       </AuthSessionHandler>
     </>
   )
