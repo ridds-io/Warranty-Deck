@@ -246,115 +246,103 @@ export default function ReceiptReviewModal({
                         )}
                     </div>
                 )}
-                padding: 'var(--space-3)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--text-sm)',
-                border: '1px solid var(--color-border-soft)',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-bg-surface)',
-                color: 'var(--color-text-primary)',
-                resize: 'vertical',
-                            }}
-                        />
-            </div>
-                )}
 
-            {/* Notification Preferences */}
-            <div style={{
-                padding: 'var(--space-4)',
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border-soft)'
-            }}>
+                {/* Notification Preferences */}
                 <div style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: '500',
-                    marginBottom: 'var(--space-3)'
+                    padding: 'var(--space-4)',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border-soft)'
                 }}>
-                    Notification Preferences
+                    <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: '500',
+                        marginBottom: 'var(--space-3)'
+                    }}>
+                        Notification Preferences
+                    </div>
+
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                        marginBottom: 'var(--space-2)',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={formData.notifyWarrantyExpiry}
+                            onChange={(e) => handleChange('notifyWarrantyExpiry', e.target.checked)}
+                        />
+                        Notify me about warranty expiry
+                    </label>
+
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                        marginBottom: 'var(--space-3)',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={formData.notifyReturnDeadline}
+                            onChange={(e) => handleChange('notifyReturnDeadline', e.target.checked)}
+                        />
+                        Notify me about return deadline
+                    </label>
+
+                    {(formData.notifyWarrantyExpiry || formData.notifyReturnDeadline) && (
+                        <div>
+                            <label style={{
+                                display: 'block',
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 'var(--text-xs)',
+                                marginBottom: 'var(--space-2)',
+                                color: 'var(--color-text-secondary)'
+                            }}>
+                                Notify me (days in advance)
+                            </label>
+                            <select
+                                value={formData.notificationDays}
+                                onChange={(e) => handleChange('notificationDays', parseInt(e.target.value))}
+                                style={{
+                                    width: '100%',
+                                    padding: 'var(--space-2)',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: 'var(--text-sm)',
+                                    border: '1px solid var(--color-border-soft)',
+                                    borderRadius: 'var(--radius-md)',
+                                    backgroundColor: 'var(--color-bg-surface)',
+                                    color: 'var(--color-text-primary)',
+                                }}
+                            >
+                                <option value={1}>1 day before</option>
+                                <option value={2}>2 days before</option>
+                                <option value={3}>3 days before</option>
+                                <option value={7}>1 week before</option>
+                                <option value={14}>2 weeks before</option>
+                                <option value={30}>1 month before</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
 
-                <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                    marginBottom: 'var(--space-2)',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-xs)'
-                }}>
-                    <input
-                        type="checkbox"
-                        checked={formData.notifyWarrantyExpiry}
-                        onChange={(e) => handleChange('notifyWarrantyExpiry', e.target.checked)}
-                    />
-                    Notify me about warranty expiry
-                </label>
-
-                <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                    marginBottom: 'var(--space-3)',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-xs)'
-                }}>
-                    <input
-                        type="checkbox"
-                        checked={formData.notifyReturnDeadline}
-                        onChange={(e) => handleChange('notifyReturnDeadline', e.target.checked)}
-                    />
-                    Notify me about return deadline
-                </label>
-
-                {(formData.notifyWarrantyExpiry || formData.notifyReturnDeadline) && (
-                    <div>
-                        <label style={{
-                            display: 'block',
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 'var(--text-xs)',
-                            marginBottom: 'var(--space-2)',
-                            color: 'var(--color-text-secondary)'
-                        }}>
-                            Notify me (days in advance)
-                        </label>
-                        <select
-                            value={formData.notificationDays}
-                            onChange={(e) => handleChange('notificationDays', parseInt(e.target.value))}
-                            style={{
-                                width: '100%',
-                                padding: 'var(--space-2)',
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 'var(--text-sm)',
-                                border: '1px solid var(--color-border-soft)',
-                                borderRadius: 'var(--radius-md)',
-                                backgroundColor: 'var(--color-bg-surface)',
-                                color: 'var(--color-text-primary)',
-                            }}
-                        >
-                            <option value={1}>1 day before</option>
-                            <option value={2}>2 days before</option>
-                            <option value={3}>3 days before</option>
-                            <option value={7}>1 week before</option>
-                            <option value={14}>2 weeks before</option>
-                            <option value={30}>1 month before</option>
-                        </select>
-                    </div>
-                )}
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+                    <Button variant="secondary" onClick={onClose} style={{ flex: 1 }}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} style={{ flex: 1 }}>
+                        Save Receipt
+                    </Button>
+                </div>
             </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-                <Button variant="secondary" onClick={onClose} style={{ flex: 1 }}>
-                    Cancel
-                </Button>
-                <Button onClick={handleSubmit} style={{ flex: 1 }}>
-                    Save Receipt
-                </Button>
-            </div>
-        </div>
         </Modal >
     )
 }
