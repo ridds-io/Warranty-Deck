@@ -37,10 +37,10 @@ function mapReceipt(row) {
     imagePath: row.image_path || null,
     items: Array.isArray(row.receipt_items)
       ? row.receipt_items.map(item => ({
-          name: item.item_name || item.name || 'Item',
-          qty: Number(item.quantity || item.qty || 1),
-          price: Number(item.price || item.amount || 0),
-        }))
+        name: item.item_name || item.name || 'Item',
+        qty: Number(item.quantity || item.qty || 1),
+        price: Number(item.price || item.amount || 0),
+      }))
       : [],
   }
 }
@@ -63,7 +63,22 @@ export function useReceipts() {
 
     let query = supabase
       .from('receipts')
-      .select('*, receipt_items(*)')
+      .select(`
+        id,
+        user_id,
+        store_name,
+        purchase_date,
+        total_amount,
+        category_name,
+        category_id,
+        folder_type,
+        return_deadline,
+        has_warranty,
+        warranty_id,
+        ai_summary,
+        image_path,
+        receipt_items(*)
+      `)
       .order('purchase_date', { ascending: false })
 
     if (user?.id) {
@@ -107,7 +122,22 @@ export function useReceipt(receiptId) {
 
     let query = supabase
       .from('receipts')
-      .select('*, receipt_items(*)')
+      .select(`
+        id,
+        user_id,
+        store_name,
+        purchase_date,
+        total_amount,
+        category_name,
+        category_id,
+        folder_type,
+        return_deadline,
+        has_warranty,
+        warranty_id,
+        ai_summary,
+        image_path,
+        receipt_items(*)
+      `)
       .eq('id', receiptId)
 
     if (user?.id) {

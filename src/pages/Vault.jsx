@@ -63,7 +63,7 @@ export default function Vault() {
 
     setIsProcessing(true)
     setErrorMessage('')
-    
+
     try {
       // 1. Upload to Supabase Storage
       setStatusMessage('Uploading receipt to secure vault storage...')
@@ -89,7 +89,7 @@ export default function Vault() {
 
       // 4. Save to Database
       setStatusMessage('Saving extracted items and return policies to database...')
-      
+
       const { data: receiptData, error: receiptError } = await supabase
         .from('receipts')
         .insert({
@@ -98,7 +98,6 @@ export default function Vault() {
           purchase_date: parsed.purchaseDate,
           total_amount: parsed.totalAmount,
           category_name: parsed.category,
-          category: parsed.category,
           folder_type: parsed.folderType || 'vault',
           return_deadline: parsed.returnDeadline,
           ai_summary: parsed.aiSummary,
