@@ -3,7 +3,7 @@
 // src/pages/Memorabilia.jsx
 // =============================================================================
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import ReceiptCard from '../components/receipt/ReceiptCard'
@@ -15,6 +15,22 @@ export default function Memorabilia() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const { receipts, loading } = useReceipts()
+
+  // Debug logging
+  useEffect(() => {
+    console.log('=== MEMORABILIA DEBUG ===')
+    console.log('Total receipts loaded:', receipts.length)
+    console.log('Receipts with folderType:', receipts.map(r => ({
+      id: r.id,
+      store: r.storeName,
+      folderType: r.folderType,
+      category: r.category
+    })))
+    const memorabiliaReceipts = receipts.filter(r => r.folderType === 'memorabilia')
+    console.log('Filtered memorabilia count:', memorabiliaReceipts.length)
+    console.log('Memorabilia receipts:', memorabiliaReceipts)
+    console.log('========================')
+  }, [receipts])
 
   const filtered = receipts.filter(receipt => {
     if (receipt.folderType !== 'memorabilia') return false

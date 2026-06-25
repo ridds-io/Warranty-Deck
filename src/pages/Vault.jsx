@@ -120,6 +120,13 @@ export default function Vault() {
   const handleSaveReceipt = async (formData) => {
     if (!user || !extractedData) return
 
+    console.log('=== SAVING RECEIPT ===')
+    console.log('Form data:', {
+      folderType: formData.folderType,
+      memorabiliaNote: formData.memorabiliaNote,
+      reimbursementFolderId: formData.reimbursementFolderId
+    })
+
     setShowReviewModal(false)
     setIsProcessing(true)
     setStatusMessage('Saving receipt to database...')
@@ -144,6 +151,8 @@ export default function Vault() {
         receiptInsertData.reimbursement_folder_id = formData.reimbursementFolderId
       }
 
+      console.log('Inserting receipt with data:', receiptInsertData)
+
       const { data: receiptData, error: receiptError } = await supabase
         .from('receipts')
         .insert(receiptInsertData)
@@ -151,6 +160,13 @@ export default function Vault() {
         .single()
 
       if (receiptError) throw receiptError
+
+      console.log('Receipt saved successfully:', {
+        id: receiptData.id,
+        folder_type: receiptData.folder_type,
+        notes: receiptData.notes
+      })
+      console.log('======================')
 
       // Insert line items
       if (extractedData.items && extractedData.items.length > 0) {
