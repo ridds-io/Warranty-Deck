@@ -135,6 +135,7 @@ export default function Vault() {
       // Save receipt to database
       const receiptInsertData = {
         user_id: user.id,
+        receipt_number: formData.receiptNumber || null,
         store_name: formData.storeName,
         purchase_date: formData.purchaseDate,
         total_amount: parseFloat(formData.totalAmount),

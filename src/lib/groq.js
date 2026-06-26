@@ -143,6 +143,7 @@ You must output ONLY a valid JSON object. No markdown, no explanations, just the
 
 Required JSON format:
 {
+  "receiptNumber": "Receipt or transaction number/ID (extract if present, otherwise null)",
   "storeName": "Name of the store",
   "purchaseDate": "YYYY-MM-DD",
   "totalAmount": 123.45,

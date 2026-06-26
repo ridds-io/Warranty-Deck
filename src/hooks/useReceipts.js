@@ -25,6 +25,7 @@ function calculateReturnDays(returnDeadline) {
 function mapReceipt(row) {
   return {
     id: row.id,
+    receiptNumber: row.receipt_number || null,
     storeName: row.store_name || row.store || 'Unknown store',
     purchaseDate: formatDate(row.purchase_date || row.purchaseDate),
     totalAmount: Number(row.total_amount || row.total || 0),
@@ -66,6 +67,7 @@ export function useReceipts() {
       .select(`
         id,
         user_id,
+        receipt_number,
         store_name,
         purchase_date,
         total_amount,
@@ -125,6 +127,7 @@ export function useReceipt(receiptId) {
       .select(`
         id,
         user_id,
+        receipt_number,
         store_name,
         purchase_date,
         total_amount,

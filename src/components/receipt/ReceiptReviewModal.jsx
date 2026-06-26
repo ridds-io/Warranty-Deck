@@ -18,6 +18,7 @@ export default function ReceiptReviewModal({
     const { folders } = useReimbursementFolders()
 
     const [formData, setFormData] = useState({
+        receiptNumber: extractedData?.receiptNumber || '',
         storeName: extractedData?.storeName || '',
         purchaseDate: extractedData?.purchaseDate || '',
         totalAmount: extractedData?.totalAmount || '',
@@ -35,6 +36,7 @@ export default function ReceiptReviewModal({
         if (extractedData) {
             setFormData(prev => ({
                 ...prev,
+                receiptNumber: extractedData.receiptNumber || '',
                 storeName: extractedData.storeName || '',
                 purchaseDate: extractedData.purchaseDate || '',
                 totalAmount: extractedData.totalAmount || '',
@@ -56,6 +58,24 @@ export default function ReceiptReviewModal({
     return (
         <Modal open={open} onClose={onClose} title="Review Receipt Details">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {/* Receipt Number */}
+                <div>
+                    <label style={{
+                        display: 'block',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)',
+                        marginBottom: 'var(--space-2)',
+                        color: 'var(--color-text-secondary)'
+                    }}>
+                        Receipt Number (Optional)
+                    </label>
+                    <Input
+                        value={formData.receiptNumber}
+                        onChange={(e) => handleChange('receiptNumber', e.target.value)}
+                        placeholder="Receipt or transaction number"
+                    />
+                </div>
+
                 {/* Basic Receipt Info */}
                 <div>
                     <label style={{

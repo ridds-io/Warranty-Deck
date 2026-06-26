@@ -34,7 +34,7 @@ export default function ReceiptCard({ receipt, onOpen }) {
               color: 'var(--color-text-tertiary)',
             }}
           >
-            Receipt
+            Receipt {receipt.receiptNumber && `#${receipt.receiptNumber}`}
           </div>
           <div
             style={{
